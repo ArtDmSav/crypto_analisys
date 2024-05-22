@@ -1,0 +1,7 @@
+services:
+  bot:
+    build: .
+    container_name: crypto_analysis_bot
+    volumes:
+      - .:/app
+    command: python bot.py
