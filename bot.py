@@ -14,7 +14,6 @@ from tradingview_ta import TA_Handler, Interval
 from webdriver_manager.chrome import ChromeDriverManager
 
 from config.data import BOT_TOKEN, WAIT_BF_DEL_CHART_PNG
-from db.create import create_db
 from language import ru, en, tr
 
 # Enable logging
@@ -24,7 +23,7 @@ logging.basicConfig(
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
-create_db()
+# create_db()
 
 LANGUAGES = {
     'en': en,
