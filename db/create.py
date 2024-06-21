@@ -1,10 +1,9 @@
 import pathlib
 import sqlite3
-from datetime import datetime
 
 # Определение пути к базе данных
 dir_path = pathlib.Path.cwd()
-path = pathlib.Path(dir_path, 'crypto_analisys.db')
+path = pathlib.Path(dir_path, 'db/crypto_analisys.db')
 print(path)
 
 
