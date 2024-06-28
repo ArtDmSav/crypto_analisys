@@ -24,7 +24,7 @@ lang_kb = [
 
 
 async def interval_kb(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'en')
+    user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
 
     keyboard = [
@@ -73,7 +73,7 @@ async def interval_kb(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 
 async def symbol_kb(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'en')
+    user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
 
     keyboard = [

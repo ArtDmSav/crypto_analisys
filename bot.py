@@ -1,13 +1,17 @@
 import asyncio
 import logging
 import os
+import re
 from datetime import datetime
 
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, BotCommand, MenuButtonCommands
 from telegram.constants import ParseMode
 from telegram.ext import CallbackQueryHandler, Application, CommandHandler, ContextTypes, MessageHandler, filters
+from tradingview_ta import Interval
 
-from config.data import BOT_TOKEN, WAIT_BF_DEL_CHART_PNG
+from config.data import BOT_TOKEN, WAIT_BF_DEL_CHART_PNG, ADMIN_USERNAME
+from db.db_connect import add_user, deactivate_user, check_user_exists, write_transaction, get_user_info, \
+    get_last_10_transactions
 from function.keyboard import lang_kb, symbol_kb, interval_kb
 from function.symbol_chart import get_tradingview_screenshot
 from function.trading_request import tr_view_msg, tr_view_bt, price_before_24h
@@ -28,25 +32,105 @@ LANGUAGES = {
 }
 
 
+async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.username in ADMIN_USERNAME:
+        # Используем регулярное выражение для извлечения аргумента после команды /add
+        match = re.match(r"^/add\s@([a-zA-Z0-9]{1,30})$", update.message.text)
+        if match:
+            add_value = match.group(1)
+            status = await add_user(add_value)
+
+            match status:
+                case 1:
+                    await update.message.reply_text(f"Вы добавили user: {add_value}")
+                case 2:
+                    await update.message.reply_text(f"User: {add_value}, был добавлен ранне.\n"
+                                                    f"Доступ предоставлен повторно")
+                case 0:
+                    await update.message.reply_text(f"Произошла ошибка записи в БД попробуйте снова")
+
+        else:
+            await update.message.reply_text("Пожалуйста, укажите значение после команды /add длиной до 30 символов.")
+    else:
+        await update.message.reply_text("Вы не являетесь админом бота")
+
+
+async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.username in ADMIN_USERNAME:
+        # Используем регулярное выражение для извлечения аргумента после команды /add
+        match = re.match(r"^/stop\s@([a-zA-Z0-9]{1,30})$", update.message.text)
+        if match:
+            add_value = match.group(1)
+            status = await deactivate_user(add_value)
+
+            if status:
+                await update.message.reply_text(f"Вы деактивировали user: {add_value}")
+            else:
+                await update.message.reply_text(f"User: {add_value}, не найден!")
+
+        else:
+            await update.message.reply_text("Пожалуйста, укажите значение после команды /stop длиной до 30 символов.")
+    else:
+        await update.message.reply_text("Вы не являетесь админом бота")
+
+
+async def u_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.username in ADMIN_USERNAME:
+        # Используем регулярное выражение для извлечения аргумента после команды /add
+        match = re.match(r"^/u_info\s@([a-zA-Z0-9]{1,30})$", update.message.text)
+        if match:
+            add_value = match.group(1)
+            user_info = await get_user_info(add_value)
+
+            if user_info:
+                await update.message.reply_text(user_info)
+            else:
+                await update.message.reply_text("Ошибка запроса в БД")
+        else:
+            await update.message.reply_text("Пожалуйста, укажите значение после команды /u_info.")
+    else:
+        await update.message.reply_text("Вы не являетесь админом бота")
+
+
+async def tr(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.username in ADMIN_USERNAME:
+        # Используем регулярное выражение для извлечения аргумента после команды /add
+        match = re.match(r"^/tr\s@([a-zA-Z0-9]{1,30})$", update.message.text)
+        if match:
+            add_value = match.group(1)
+            user_info = await get_last_10_transactions(add_value)
+
+            if user_info:
+                await update.message.reply_text(user_info)
+            else:
+                await update.message.reply_text("Ошибка запроса в БД")
+        else:
+            await update.message.reply_text("Пожалуйста, укажите значение после команды /u_tr.")
+    else:
+        await update.message.reply_text("Вы не являетесь админом бота")
+
+
 async def info_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'en')
+    user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
     await update.message.reply_text(lang.INFO_BOT)
 
 
 async def info_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'en')
+    user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
     await update.message.reply_text(lang.INFO_INTERVAL)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # Set default language to English
-    user_language = context.user_data.get('language', 'en')
+    user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
 
-    reply_markup = InlineKeyboardMarkup(lang_kb)
-    await update.message.reply_html(lang.START_MSG, reply_markup=reply_markup)
+    if await check_user_exists(update.message.from_user.username):
+        reply_markup = InlineKeyboardMarkup(lang_kb)
+        await update.message.reply_html(lang.START_MSG, reply_markup=reply_markup)
+    else:
+        await update.message.reply_text(lang.MSG_ERROR)
 
 
 async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -73,11 +157,17 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def set_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await interval_kb(update, context)
+    user_language = context.user_data.get('language', 'es')
+    lang = LANGUAGES[user_language]
+
+    if await check_user_exists(update.callback_query.from_user.username):
+        await interval_kb(update, context)
+    else:
+        await update.message.reply_text(lang.MSG_ERROR)
 
 
 async def interval_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'en')
+    user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
 
     query = update.callback_query
@@ -119,11 +209,11 @@ async def interval_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 
 async def analisys(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    error = False
-    user_language = context.user_data.get('language', 'en')
+    user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
 
-    if update.callback_query:
+    error = False
+    if update.callback_query and await check_user_exists(update.callback_query.from_user.username):
         query = update.callback_query
         await query.answer()
         trading_pair = query.data
@@ -157,8 +247,13 @@ async def analisys(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.callback_query.message.reply_html(recomendation, reply_markup=reply_markup)
             await update.callback_query.message.reply_text(lang.CHANGE_INTERVAL)
             await symbol_kb(update, context)
+            await write_transaction(update.callback_query.from_user.username,
+                                    context.user_data.get("interval", Interval.INTERVAL_1_HOUR),
+                                    trading_pair,
+                                    price,
+                                    update.callback_query.from_user.language_code)
 
-    else:
+    elif await check_user_exists(update.message.from_user.username):
         trading_pair = update.message.text.strip().upper()
         context.user_data['trading_pair'] = trading_pair
 
@@ -166,11 +261,12 @@ async def analisys(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         max_price, min_price, price_change_percent, price = await price_before_24h(trading_pair)
 
         if price:
-            await update.message.reply_text(f"\n\n_________________________"
-                                            f"📊 *{trading_pair}{lang.PAIR_PRICE}:* {price}\n\n"
-                                            f"↕️ *{lang.PAIR_CHANGE}:* {price_change_percent}%\n"
-                                            f"📈 *{lang.PAIR_MAX}:* {max_price}\n"
-                                            f"📉 *{lang.PAIR_MIN}:* {min_price}",
+            await update.message.reply_text(f"\n\n-------------------------------\n"
+                                            f"📊*{trading_pair}{lang.PAIR_PRICE}:* {price}\n"
+                                            f"-------------------------------\n\n"
+                                            f"↕️*{lang.PAIR_CHANGE}:* {price_change_percent}%\n"
+                                            f"📈*{lang.PAIR_MAX}:* {max_price}\n"
+                                            f"📉*{lang.PAIR_MIN}:* {min_price}",
                                             parse_mode=ParseMode.MARKDOWN)
         else:
             error = True
@@ -186,6 +282,13 @@ async def analisys(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_html(recomendation, reply_markup=reply_markup)
             await update.message.reply_text(lang.CHANGE_INTERVAL)
             await symbol_kb(update, context)
+            await write_transaction(update.message.from_user.username,
+                                    context.user_data.get("interval", Interval.INTERVAL_1_HOUR),
+                                    trading_pair,
+                                    price,
+                                    update.message.from_user.language_code)
+    else:
+        await update.message.reply_text(lang.MSG_ERROR)
 
 
 async def get_chart(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -254,10 +357,17 @@ def main() -> None:
     application.add_handler(CommandHandler("set_interval", set_interval))
     application.add_handler(CommandHandler("info_bot", info_bot))
     application.add_handler(CommandHandler("info_interval", info_interval))
+
     application.add_handler(CallbackQueryHandler(get_chart, pattern='^True$'))
     application.add_handler(CallbackQueryHandler(set_language, pattern='^lang_'))
     application.add_handler(CallbackQueryHandler(analisys, pattern='^[A-Z]{3,5}[A-Z]{3,5}$'))
     application.add_handler(CallbackQueryHandler(interval_choice))
+
+    # обработчики команд админа
+    application.add_handler(CommandHandler("add", add_command))
+    application.add_handler(CommandHandler("stop", stop_command))
+    application.add_handler(CommandHandler("u_info", u_info))
+    application.add_handler(CommandHandler("tr", tr))
 
     # on non command i.e message - echo the message on Telegram
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, analisys))
