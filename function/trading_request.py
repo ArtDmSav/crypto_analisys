@@ -76,7 +76,7 @@ async def tr_price(trading_pair):
 
 
 async def tr_view_bt(trading_pair, update, context) -> str:
-    user_language = context.user_data.get('language', 'en')
+    user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
 
     usr_interval = context.user_data.get("interval", Interval.INTERVAL_1_HOUR)
@@ -117,7 +117,7 @@ async def tr_view_bt(trading_pair, update, context) -> str:
 
 
 async def tr_view_msg(trading_pair, update, context) -> str:
-    user_language = context.user_data.get('language', 'en')
+    user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
 
     usr_interval = context.user_data.get("interval", Interval.INTERVAL_1_HOUR)

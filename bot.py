@@ -11,7 +11,7 @@ from tradingview_ta import Interval
 
 from config.data import BOT_TOKEN, WAIT_BF_DEL_CHART_PNG, ADMIN_USERNAME
 from db.db_connect import add_user, deactivate_user, check_user_exists, write_transaction, get_user_info, \
-    get_last_10_transactions
+    get_last_10_transactions, get_user_list
 from function.keyboard import lang_kb, symbol_kb, interval_kb
 from function.symbol_chart import get_tradingview_screenshot
 from function.trading_request import tr_view_msg, tr_view_bt, price_before_24h
@@ -35,7 +35,8 @@ LANGUAGES = {
 async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message.from_user.username in ADMIN_USERNAME:
         # Используем регулярное выражение для извлечения аргумента после команды /add
-        match = re.match(r"^/add\s@([a-zA-Z0-9]{1,30})$", update.message.text)
+        match = re.match(r'/add\s+@?(\w{5,32})', update.message.text)
+        await update.message.reply_text(f" {match}")
         if match:
             add_value = match.group(1)
             status = await add_user(add_value)
@@ -58,7 +59,7 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message.from_user.username in ADMIN_USERNAME:
         # Используем регулярное выражение для извлечения аргумента после команды /add
-        match = re.match(r"^/stop\s@([a-zA-Z0-9]{1,30})$", update.message.text)
+        match = re.match(r'/stop\s+@?(\w{5,32})', update.message.text)
         if match:
             add_value = match.group(1)
             status = await deactivate_user(add_value)
@@ -77,7 +78,7 @@ async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def u_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message.from_user.username in ADMIN_USERNAME:
         # Используем регулярное выражение для извлечения аргумента после команды /add
-        match = re.match(r"^/u_info\s@([a-zA-Z0-9]{1,30})$", update.message.text)
+        match = re.match(r'/u_info\s+@?(\w{5,32})', update.message.text)
         if match:
             add_value = match.group(1)
             user_info = await get_user_info(add_value)
@@ -92,10 +93,23 @@ async def u_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("Вы не являетесь админом бота")
 
 
+async def lst(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.username in ADMIN_USERNAME:
+        users_list = await get_user_list()
+
+        if users_list:
+            await update.message.reply_text(users_list)
+        else:
+            await update.message.reply_text("Ошибка запроса в БД")
+
+    else:
+        await update.message.reply_text("Вы не являетесь админом бота")
+
+
 async def tr(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message.from_user.username in ADMIN_USERNAME:
         # Используем регулярное выражение для извлечения аргумента после команды /add
-        match = re.match(r"^/tr\s@([a-zA-Z0-9]{1,30})$", update.message.text)
+        match = re.match(r'/tr\s+@?(\w{5,32})', update.message.text)
         if match:
             add_value = match.group(1)
             user_info = await get_last_10_transactions(add_value)
@@ -130,7 +144,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         reply_markup = InlineKeyboardMarkup(lang_kb)
         await update.message.reply_html(lang.START_MSG, reply_markup=reply_markup)
     else:
-        await update.message.reply_text(lang.MSG_ERROR)
+        await update.message.reply_text(lang.ACCESS_ERROR)
 
 
 async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -159,11 +173,15 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def set_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
-
-    if await check_user_exists(update.callback_query.from_user.username):
+    if update.callback_query and await check_user_exists(update.callback_query.from_user.username):
+        await interval_kb(update, context)
+    elif await check_user_exists(update.message.from_user.username):
         await interval_kb(update, context)
     else:
-        await update.message.reply_text(lang.MSG_ERROR)
+        if update.callback_query:
+            await update.callback_query.message.reply_text(lang.MSG_ERROR)
+        else:
+            await update.message.reply_text(lang.ACCESS_ERROR)
 
 
 async def interval_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -288,11 +306,11 @@ async def analisys(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                                     price,
                                     update.message.from_user.language_code)
     else:
-        await update.message.reply_text(lang.MSG_ERROR)
+        await update.message.reply_text(lang.ACCESS_ERROR)
 
 
 async def get_chart(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'en')
+    user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
 
     query = update.callback_query
@@ -329,12 +347,13 @@ async def get_chart(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def set_bot_commands(application: Application, language: str) -> None:
     lang = LANGUAGES[language]
+    # lang = 'en'
 
     commands = [
-        BotCommand("start", en.BOT_START),
-        BotCommand("set_interval", en.SET_INTERVAL),
-        BotCommand("info_bot", en.ABOUT_BOT),
-        BotCommand("info_interval", en.INTERVAL_WHAT_IS_IT),
+        BotCommand("start", lang.BOT_START),
+        BotCommand("set_interval", lang.SET_INTERVAL),
+        BotCommand("info_bot", lang.ABOUT_BOT),
+        BotCommand("info_interval", lang.INTERVAL_WHAT_IS_IT),
     ]
 
     await application.bot.set_my_commands(commands)
@@ -342,15 +361,15 @@ async def set_bot_commands(application: Application, language: str) -> None:
 
 
 async def on_startup(application: Application) -> None:
-    # Set default language to English if not specified
-    default_language = 'en'
+    # Set default language to Espan if not specified
+    default_language = 'es'
     await set_bot_commands(application, default_language)
 
 
 def main() -> None:
     """Start the bot."""
-    # application = Application.builder().token(BOT_TOKEN).post_init(on_startup).build() # Change menu lang
-    application = Application.builder().token(BOT_TOKEN).build()
+    application = Application.builder().token(BOT_TOKEN).post_init(on_startup).build()  # Change menu lang
+    # application = Application.builder().token(BOT_TOKEN).build()
 
     # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", start))
@@ -368,6 +387,7 @@ def main() -> None:
     application.add_handler(CommandHandler("stop", stop_command))
     application.add_handler(CommandHandler("u_info", u_info))
     application.add_handler(CommandHandler("tr", tr))
+    application.add_handler(CommandHandler("lst", lst))
 
     # on non command i.e message - echo the message on Telegram
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, analisys))

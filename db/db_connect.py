@@ -133,7 +133,7 @@ async def write_transaction(username: str,
         print(e)
 
 
-async def get_user_info(username: str):
+async def get_user_info(username: str) -> str:
     try:
         async with async_session() as session:
             async with session.begin():
@@ -157,10 +157,10 @@ async def get_user_info(username: str):
 
                 return user_info
     except Exception as e:
-        return False
+        return ''
 
 
-async def get_last_10_transactions(username: str):
+async def get_last_10_transactions(username: str) -> str:
     try:
         async with async_session() as session:
             async with session.begin():
@@ -200,4 +200,33 @@ async def get_last_10_transactions(username: str):
                 return transactions_info
     except Exception as e:
         print(e)
-        return False
+        return ''
+
+
+async def get_user_list() -> str:
+    try:
+        async with async_session() as session:
+            async with session.begin():
+                # Поиск всех пользователей
+                query = select(User)
+                result = await session.execute(query)
+                users = result.scalars().all()
+
+                if not users:
+                    return "No users found."
+
+                # Форматирование данных пользователей в строку
+                users_info = "\n".join(
+                    [
+                        f"Username: @{user.username}\n"
+                        f"Status: {user.status}\n"
+                        f"Last Activity DateTime: {user.last_activity_datetime}\n"
+                        for user in users
+                    ]
+                )
+
+                return users_info
+
+    except Exception as e:
+        print(e)
+        return ''
