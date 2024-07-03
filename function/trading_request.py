@@ -116,6 +116,54 @@ async def tr_view_bt(trading_pair, update, context) -> str:
         return ''
 
 
+async def update_tr_view_bt(trading_pair, lang: str, usr_interval: str, ) -> str:
+    intervals = {
+        "1m": lang.MIN_1,
+        "5m": lang.MIN_5,
+        "15m": lang.MIN_15,
+        "30m": lang.MIN_30,
+        "1h": lang.HOUR_1,
+        "2h": lang.HOURS_2,
+        "4h": lang.HOURS_4,
+        "1d": lang.DAY_1,
+        "1W": lang.WEEK_1,
+        "1M": lang.MONTH_1
+    }
+
+    show_usr_interval = intervals[usr_interval]
+
+    try:
+        response = TA_Handler(
+            symbol=trading_pair,
+            screener="crypto",
+            exchange="BINANCE",
+            interval=usr_interval
+        )
+
+        match response.get_analysis().summary["RECOMMENDATION"]:
+            case 'BUY':
+                return f"{lang.BOT_RECOMMEND_1}{show_usr_interval}{lang.BOT_RECOMMEND_2}" \
+                       f"\n\n-------------------\n✅ {lang.BUY} ✅\n-------------------"
+            case 'STRONG_BUY':
+                return f"{lang.BOT_RECOMMEND_1}{show_usr_interval}{lang.BOT_RECOMMEND_2}" \
+                       f"\n\n-------------------\n✅ {lang.STRONG_BUY} ✅\n-------------------"
+            case 'SELL':
+                return f"{lang.BOT_RECOMMEND_1}{show_usr_interval}{lang.BOT_RECOMMEND_2}" \
+                       f"\n\n-------------------\n✅ {lang.SELL} ✅\n-------------------"
+            case 'STRONG_SELL':
+                return f"{lang.BOT_RECOMMEND_1}{show_usr_interval}{lang.BOT_RECOMMEND_2}" \
+                       f"\n\n-------------------\n✅ {lang.STRONG_SELL} ✅\n-------------------"
+            case 'NEUTRAL':
+                return f"{lang.BOT_RECOMMEND_1}{show_usr_interval}{lang.BOT_RECOMMEND_2}" \
+                       f"\n\n-------------------\n✅ {lang.NEUTRAL} ✅\n-------------------"
+            case _:
+                return ''
+
+    except Exception as e:
+        print(e)
+        return ''
+
+
 async def tr_view_msg(trading_pair, update, context) -> str:
     user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]

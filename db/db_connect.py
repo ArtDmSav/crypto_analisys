@@ -27,6 +27,13 @@ class User(Base):
     status = sa.Column(sa.Integer, default=1)
     last_activity_datetime = sa.Column(sa.DateTime)
     language = sa.Column(sa.String(5))
+    account_id = sa.Column(sa.Integer, default=0)
+    update_status = sa.Column(sa.Boolean, nullable=False, default=False)
+    update_interval = sa.Column(sa.Integer, nullable=False, default=0)
+    update_time = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+    interval = sa.Column(sa.String(5), nullable=False, default="1h")
+    trading_pair = sa.Column(sa.String(10), nullable=False, default="BTCUSDT")
+    chat_id = sa.Column(sa.BigInteger, default=0)
 
 
 # Создаем асинхронную сессию
@@ -65,6 +72,70 @@ async def add_user(username: str,
         return 0
 
 
+async def update_pair() -> list:
+    async with async_session() as session:
+        async with session.begin():
+            # Поиск пользователей с update_status == True
+            query = select(User).where(User.update_status == True)
+            result = await session.execute(query)
+            users = result.scalars().all()
+
+            if not users:
+                return []
+
+            # Форматирование данных в виде списка словарей
+            users_info = [
+                {
+                    "chat_id": user.chat_id,
+                    "trading_pair": user.trading_pair,
+                    "interval": user.interval,
+                    "update_time": user.update_time,
+                    "update_interval": user.update_interval,
+                    "language": user.language
+                }
+                for user in users
+            ]
+            print(users_info)
+            return users_info
+
+
+async def update_status(username: str, status: bool, update_interval: int = 86400) -> None:
+    async with async_session() as session:
+        async with session.begin():
+            # Поиск пользователя по username
+            query = select(User).where(User.username == username)
+            result = await session.execute(query)
+            user = result.scalars().first()
+
+            if user is None:
+                print(f"User with username {username} not found.")
+                return
+
+            # Обновление полtq
+            user.update_status = status
+            user.update_interval = update_interval
+            session.add(user)
+            await session.commit()
+
+
+async def update_update_time(chat_id: int, update_time: datetime) -> None:
+    async with async_session() as session:
+        async with session.begin():
+            # Поиск пользователя по username
+            query = select(User).where(User.chat_id == chat_id)
+            result = await session.execute(query)
+            user = result.scalars().first()
+
+            if user is None:
+                print(f"User with username {chat_id} not found.")
+                return
+
+            # Обновление поле
+            user.update_time = update_time
+            session.add(user)
+            await session.commit()
+
+
 async def check_user_exists(username: str) -> bool:
     async with async_session() as session:
         async with session.begin():
@@ -99,8 +170,10 @@ async def write_transaction(username: str,
                             trading_pair: str,
                             price: str,
                             lang_code: str,
+                            chat_id: int = 0,
                             datatime=datetime.now()
                             ) -> None:
+    print(f"\n\nwrite_transaction\nchat_id = {chat_id}\n\n")
     try:
         async with async_session() as session:
             async with session.begin():
@@ -113,9 +186,14 @@ async def write_transaction(username: str,
                     print(f"User with username {username} not found.")
                     return
 
-                # Обновление поля last_activity_datetime и language у пользователя
+                # Обновление поля у пользователя
                 user.last_activity_datetime = datatime
                 user.language = lang_code
+                user.interval = interval
+                user.trading_pair = trading_pair
+                user.update_time = datatime
+                user.chat_id = chat_id
+
                 session.add(user)
 
                 # Создание новой операции

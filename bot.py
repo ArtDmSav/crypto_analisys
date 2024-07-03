@@ -2,19 +2,19 @@ import asyncio
 import logging
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, BotCommand, MenuButtonCommands
+from telegram import Update, InlineKeyboardMarkup, BotCommand, MenuButtonCommands
 from telegram.constants import ParseMode
 from telegram.ext import CallbackQueryHandler, Application, CommandHandler, ContextTypes, MessageHandler, filters
-from tradingview_ta import Interval
 
 from config.data import BOT_TOKEN, WAIT_BF_DEL_CHART_PNG, ADMIN_USERNAME
-from db.db_connect import add_user, deactivate_user, check_user_exists, write_transaction, get_user_info, \
-    get_last_10_transactions, get_user_list
-from function.keyboard import lang_kb, symbol_kb, interval_kb
+from db.db_connect import add_user, deactivate_user, check_user_exists, get_user_info, \
+    get_last_10_transactions, get_user_list, update_status, update_pair, update_update_time
+from function.keyboard import lang_kb, symbol_kb, interval_kb, newsletter_chart_clbk_kb, \
+    newsletter_chart_msg_kb, update_interval_kb
 from function.symbol_chart import get_tradingview_screenshot
-from function.trading_request import tr_view_msg, tr_view_bt, price_before_24h
+from function.trading_request import tr_view_msg, tr_view_bt, price_before_24h, update_tr_view_bt
 from language import ru, en, tr, es
 
 # Enable logging
@@ -141,6 +141,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     lang = LANGUAGES[user_language]
 
     if await check_user_exists(update.message.from_user.username):
+        await update_status(update.message.from_user.username, False)
         reply_markup = InlineKeyboardMarkup(lang_kb)
         await update.message.reply_html(lang.START_MSG, reply_markup=reply_markup)
     else:
@@ -174,8 +175,10 @@ async def set_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
     if update.callback_query and await check_user_exists(update.callback_query.from_user.username):
+        await update_status(update.callback_query.from_user.username, False)
         await interval_kb(update, context)
     elif await check_user_exists(update.message.from_user.username):
+        await update_status(update.message.from_user.username, False)
         await interval_kb(update, context)
     else:
         if update.callback_query:
@@ -236,7 +239,7 @@ async def analisys(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await query.answer()
         trading_pair = query.data
         context.user_data['trading_pair'] = trading_pair
-        # Delete key board
+        # Delete keyboard
         await update.callback_query.edit_message_reply_markup(reply_markup=None)
         # price = await tr_price(trading_pair)
 
@@ -255,21 +258,13 @@ async def analisys(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.callback_query.message.reply_text(lang.INVALID_SYMBOL)
 
         if not error:
-            recomendation = await tr_view_bt(trading_pair, update, context)
-            # if {recomendation} empty it's == error
-            error = False if recomendation else True
+            recomend = await tr_view_bt(trading_pair, update, context)
+            # if {recomend} empty it's == error
+            error = False if recomend else True
 
         if not error:
-            reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton(lang.GET_CHART, callback_data="True")]])
-
-            await update.callback_query.message.reply_html(recomendation, reply_markup=reply_markup)
-            await update.callback_query.message.reply_text(lang.CHANGE_INTERVAL)
-            await symbol_kb(update, context)
-            await write_transaction(update.callback_query.from_user.username,
-                                    context.user_data.get("interval", Interval.INTERVAL_1_HOUR),
-                                    trading_pair,
-                                    price,
-                                    update.callback_query.from_user.language_code)
+            await update_status(update.callback_query.from_user.username, False)
+            await newsletter_chart_clbk_kb(recomend, price, update, context)
 
     elif await check_user_exists(update.message.from_user.username):
         trading_pair = update.message.text.strip().upper()
@@ -291,20 +286,14 @@ async def analisys(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_text(lang.INVALID_SYMBOL)
 
         if not error:
-            recomendation = await tr_view_msg(trading_pair, update, context)
-            # if {recomendation} empty it's == error
-            error = False if recomendation else True
+            recomend = await tr_view_msg(trading_pair, update, context)
+            # if {recomend} empty it's == error
+            error = False if recomend else True
 
         if not error:
-            reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton(lang.GET_CHART, callback_data="True")]])
-            await update.message.reply_html(recomendation, reply_markup=reply_markup)
-            await update.message.reply_text(lang.CHANGE_INTERVAL)
-            await symbol_kb(update, context)
-            await write_transaction(update.message.from_user.username,
-                                    context.user_data.get("interval", Interval.INTERVAL_1_HOUR),
-                                    trading_pair,
-                                    price,
-                                    update.message.from_user.language_code)
+            await update_status(update.message.from_user.username, False)
+            await newsletter_chart_msg_kb(recomend, price, update, context)
+
     else:
         await update.message.reply_text(lang.ACCESS_ERROR)
 
@@ -316,8 +305,8 @@ async def get_chart(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
 
-    # Delete key board
-    await update.callback_query.edit_message_reply_markup(reply_markup=None)
+    # Delete keyboard
+    # await update.callback_query.edit_message_reply_markup(reply_markup=None)
 
     base_dir = os.path.abspath(os.path.dirname(__file__))
     picture_dir = os.path.join(base_dir, 'picture')
@@ -325,24 +314,100 @@ async def get_chart(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not os.path.exists(picture_dir):
         os.makedirs(picture_dir)
     await query.answer()
-    choice = query.data
-    if choice == "True":
-        await query.message.reply_text(lang.BUILD_CHART)
-        time_stamp = datetime.now()
-        trading_pair = context.user_data.get("trading_pair", "BTCUSDT")
-        try:
-            screenshot_interval = context.user_data.get("screenshot_interval", '60')
-            await get_tradingview_screenshot(screenshot_interval, trading_pair, str(time_stamp))
-            name_png = os.path.join(picture_dir, f'{time_stamp}_{trading_pair}.png')
-            with open(name_png, 'rb') as file:
-                await query.message.reply_photo(file)
+    # choice = query.data
+    # if choice == "True":
+    await query.message.reply_text(lang.BUILD_CHART)
+    time_stamp = datetime.now()
+    trading_pair = context.user_data.get("trading_pair", "BTCUSDT")
+    try:
+        screenshot_interval = context.user_data.get("screenshot_interval", '60')
+        await get_tradingview_screenshot(screenshot_interval, trading_pair, str(time_stamp))
+        name_png = os.path.join(picture_dir, f'{time_stamp}_{trading_pair}.png')
+        with open(name_png, 'rb') as file:
+            await query.message.reply_photo(file)
 
-            await asyncio.sleep(WAIT_BF_DEL_CHART_PNG)
-            os.remove(name_png)
+        await asyncio.sleep(WAIT_BF_DEL_CHART_PNG)
+        os.remove(name_png)
 
-        except Exception as e:
-            print(e)
-            pass
+    except Exception as e:
+        print(e)
+
+
+async def update_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_language = context.user_data.get('language', 'es')
+    lang = LANGUAGES[user_language]
+
+    query = update.callback_query
+    await query.answer()
+
+    # Delete keyboard
+    await update.callback_query.edit_message_reply_markup(reply_markup=None)
+
+    # await update_status(update.callback_query.from_user.username, True)
+    await update_interval_kb(update, context)
+
+
+async def update_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_language = context.user_data.get('language', 'es')
+    lang = LANGUAGES[user_language]
+
+    query = update.callback_query
+    await query.answer()
+
+    # Delete keyboard
+    # await update.callback_query.edit_message_reply_markup(reply_markup=None)
+    # Удаляем текст и клавиатуру
+    await update.callback_query.edit_message_text(text=f"{lang.UPDATE_INTERVAL}", reply_markup=None)
+
+    await update_status(update.callback_query.from_user.username, True, int(query.data))
+
+
+async def update_loop(application: Application) -> None:
+    while True:
+        users = await update_pair()
+        now = datetime.now()
+        for user in users:
+            if now - user['update_time'] > timedelta(seconds=user['update_interval']):
+                max_price, min_price, price_change_percent, price = await price_before_24h(user['trading_pair'])
+                error = False
+                lang = LANGUAGES[user['language']]
+                if price:
+                    await application.bot.send_message(chat_id=user['chat_id'],
+                                                       text=f"\n\n-------------------------------\n"
+                                                            f"📊*{user['trading_pair']}{lang.PAIR_PRICE}:* {price}\n"
+                                                            f"-------------------------------\n\n"
+                                                            f"↕️*{lang.PAIR_CHANGE}:* {price_change_percent}%\n"
+                                                            f"📈*{lang.PAIR_MAX}:* {max_price}\n"
+                                                            f"📉*{lang.PAIR_MIN}:* {min_price}",
+                                                       parse_mode=ParseMode.MARKDOWN)
+                else:
+                    error = True
+                    await application.bot.send_message(chat_id=user['chat_id'],
+                                                       text=lang.INVALID_SYMBOL)
+
+                if not error:
+                    recomend = await update_tr_view_bt(user['trading_pair'], lang, user['interval'])
+                    # if {recomend} empty it's == error
+                    error = False if recomend else True
+                if not error:
+                    await application.bot.send_message(chat_id=user['chat_id'],
+                                                       text=recomend)
+                else:
+                    await application.bot.send_message(chat_id=user['chat_id'],
+                                                       text=lang.ERROR)
+
+                await update_update_time(user['chat_id'], now)
+                await application.bot.send_message(chat_id=user['chat_id'],
+                                                   text=f"{lang.STOP_UPDATE}/stop_update")
+
+        await asyncio.sleep(5)
+
+
+async def stop_update(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    try:
+        await update_status(update.message.from_user.username, False)
+    except:
+        print("___________error__________stop_update________")
 
 
 async def set_bot_commands(application: Application, language: str) -> None:
@@ -364,11 +429,13 @@ async def on_startup(application: Application) -> None:
     # Set default language to Espan if not specified
     default_language = 'es'
     await set_bot_commands(application, default_language)
+    asyncio.create_task(update_loop(application))
 
 
 def main() -> None:
     """Start the bot."""
     application = Application.builder().token(BOT_TOKEN).post_init(on_startup).build()  # Change menu lang
+
     # application = Application.builder().token(BOT_TOKEN).build()
 
     # on different commands - answer in Telegram
@@ -376,9 +443,12 @@ def main() -> None:
     application.add_handler(CommandHandler("set_interval", set_interval))
     application.add_handler(CommandHandler("info_bot", info_bot))
     application.add_handler(CommandHandler("info_interval", info_interval))
+    application.add_handler(CommandHandler("stop_update", stop_update))
 
+    application.add_handler(CallbackQueryHandler(update_data, pattern='^newsletter$'))
     application.add_handler(CallbackQueryHandler(get_chart, pattern='^True$'))
     application.add_handler(CallbackQueryHandler(set_language, pattern='^lang_'))
+    application.add_handler(CallbackQueryHandler(update_interval, pattern='^\d{5}$'))
     application.add_handler(CallbackQueryHandler(analisys, pattern='^[A-Z]{3,5}[A-Z]{3,5}$'))
     application.add_handler(CallbackQueryHandler(interval_choice))
 

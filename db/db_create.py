@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -23,6 +24,13 @@ class User(Base):
     status = sa.Column(sa.Integer, default=1)
     last_activity_datetime = sa.Column(sa.DateTime)
     language = sa.Column(sa.String(5))
+    account_id = sa.Column(sa.Integer, default=0)
+    update_status = sa.Column(sa.Boolean, nullable=False, default=False)
+    update_interval = sa.Column(sa.Integer, nullable=False, default=0)
+    update_time = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
+    interval = sa.Column(sa.String(5), nullable=False, default="1h")
+    trading_pair = sa.Column(sa.String(10), nullable=False, default="BTCUSDT")
+    chat_id = sa.Column(sa.BigInteger, default=0)
 
 
 # Определяем модель для таблицы operations
