@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 from telegram import Update, InlineKeyboardMarkup, BotCommand, MenuButtonCommands
 from telegram.constants import ParseMode
+from telegram.error import TelegramError, TimedOut
 from telegram.ext import CallbackQueryHandler, Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from config.data import BOT_TOKEN, WAIT_BF_DEL_CHART_PNG, ADMIN_USERNAME
@@ -241,7 +242,6 @@ async def analisys(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data['trading_pair'] = trading_pair
         # Delete keyboard
         await update.callback_query.edit_message_reply_markup(reply_markup=None)
-        # price = await tr_price(trading_pair)
 
         max_price, min_price, price_change_percent, price = await price_before_24h(trading_pair)
 
@@ -259,7 +259,6 @@ async def analisys(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
         if not error:
             recomend = await tr_view_bt(trading_pair, update, context)
-            # if {recomend} empty it's == error
             error = False if recomend else True
 
         if not error:
@@ -367,45 +366,38 @@ async def update_loop(application: Application) -> None:
         users = await update_pair()
         now = datetime.now()
         for user in users:
-            if now - user['update_time'] > timedelta(seconds=user['update_interval']):
-                max_price, min_price, price_change_percent, price = await price_before_24h(user['trading_pair'])
-                error = False
-                lang = LANGUAGES[user['language']]
-                if price:
-                    await application.bot.send_message(chat_id=user['chat_id'],
-                                                       text=f"\n\n-------------------------------\n"
-                                                            f"📊*{user['trading_pair']}{lang.PAIR_PRICE}:* {price}\n"
-                                                            f"-------------------------------\n\n"
-                                                            f"↕️*{lang.PAIR_CHANGE}:* {price_change_percent}%\n"
-                                                            f"📈*{lang.PAIR_MAX}:* {max_price}\n"
-                                                            f"📉*{lang.PAIR_MIN}:* {min_price}",
-                                                       parse_mode=ParseMode.MARKDOWN)
-                else:
-                    error = True
-                    await application.bot.send_message(chat_id=user['chat_id'],
-                                                       text=lang.INVALID_SYMBOL)
-
-                if not error:
+            try:
+                if now - user['update_time'] > timedelta(seconds=user['update_interval']):
+                    max_price, min_price, price_change_percent, price = await price_before_24h(user['trading_pair'])
+                    lang = LANGUAGES[user['language']]
                     recomend = await update_tr_view_bt(user['trading_pair'], lang, user['interval'])
-                    # if {recomend} empty it's == error
-                    error = False if recomend else True
-                if not error:
-                    await application.bot.send_message(chat_id=user['chat_id'],
-                                                       text=recomend)
-                else:
-                    await application.bot.send_message(chat_id=user['chat_id'],
-                                                       text=lang.ERROR)
+                    await update_update_time(user['chat_id'], now)
+                    try:
+                        await application.bot.send_message(chat_id=user['chat_id'],
+                                                           text=f"\n\n-------------------------------\n"
+                                                                f"📊*{user['trading_pair']}{lang.PAIR_PRICE}:* {price}\n"
+                                                                f"-------------------------------\n\n"
+                                                                f"↕️*{lang.PAIR_CHANGE}:* {price_change_percent}%\n"
+                                                                f"📈*{lang.PAIR_MAX}:* {max_price}\n"
+                                                                f"📉*{lang.PAIR_MIN}:* {min_price}\n",
+                                                           parse_mode=ParseMode.MARKDOWN
+                                                           )
+                        await application.bot.send_message(chat_id=user['chat_id'],
+                                                           text=f"{recomend}\n"
+                                                                f"{lang.STOP_UPDATE}/stop_update")
+                    except TimedOut as e:
+                        print(f"{e} --------- error")
 
-                await update_update_time(user['chat_id'], now)
-                await application.bot.send_message(chat_id=user['chat_id'],
-                                                   text=f"{lang.STOP_UPDATE}/stop_update")
-
-        await asyncio.sleep(5)
+            except TelegramError as e:
+                await update_status(user["username"], False)
+                print(f"------------------------{e}----------------------")
+        await asyncio.sleep(10)
 
 
 async def stop_update(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     try:
         await update_status(update.message.from_user.username, False)
+        await update.message.reply_text(lang.UPDATE_WAS_STOPPED)
     except:
         print("___________error__________stop_update________")
 

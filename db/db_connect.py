@@ -86,6 +86,7 @@ async def update_pair() -> list:
             # Форматирование данных в виде списка словарей
             users_info = [
                 {
+                    "username": user.username,
                     "chat_id": user.chat_id,
                     "trading_pair": user.trading_pair,
                     "interval": user.interval,
