@@ -67,6 +67,12 @@ async def info_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(lang.INFO_BOT)
 
 
+async def support(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_language = context.user_data.get('language', 'es')
+    lang = LANGUAGES[user_language]
+    await update.message.reply_text(lang.SUPPORT_USERNAME)
+
+
 async def info_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
@@ -366,6 +372,7 @@ async def set_bot_commands(application: Application, language: str) -> None:
         BotCommand("set_interval", lang.SET_INTERVAL),
         BotCommand("info_bot", lang.ABOUT_BOT),
         BotCommand("info_interval", lang.INTERVAL_WHAT_IS_IT),
+        BotCommand("support", lang.SUPPORT),
     ]
 
     await application.bot.set_my_commands(commands)
@@ -390,6 +397,7 @@ def main() -> None:
     application.add_handler(CommandHandler("set_interval", set_interval))
     application.add_handler(CommandHandler("info_bot", info_bot))
     application.add_handler(CommandHandler("info_interval", info_interval))
+    application.add_handler(CommandHandler("support", support))
     application.add_handler(CommandHandler("stop_update", stop_update))
 
     application.add_handler(CallbackQueryHandler(choose_language_callback, pattern='^choose_language$'))
