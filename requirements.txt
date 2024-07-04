@@ -33,3 +33,5 @@ webdriver-manager==4.0.1
 asyncpg==0.29.0
 SQLAlchemy==2.0.31
 alembic==1.13.2
+
+sentry_sdk==2.7.1

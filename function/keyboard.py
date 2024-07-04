@@ -93,8 +93,8 @@ async def update_interval_kb(update, context) -> None:
 
     reply_markup = InlineKeyboardMarkup([
         [
-            # InlineKeyboardButton(lang.MIN_10, callback_data="00600"),
-            InlineKeyboardButton("test10sec", callback_data="00010"),
+            InlineKeyboardButton(lang.MIN_10, callback_data="00600"),
+            # InlineKeyboardButton("test10sec", callback_data="00010"),
             InlineKeyboardButton(lang.MIN_30, callback_data="01800"),
             InlineKeyboardButton(lang.HOUR_1, callback_data="03600"),
         ],

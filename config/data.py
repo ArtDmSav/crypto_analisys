@@ -22,7 +22,7 @@ WAIT_BF_DEL_CHART_PNG = 3  # second
 ADMIN_USERNAME = (config['Admin']['admin_1'], config['Admin']['admin_2'], config['Admin']['admin_3'])
 
 # Sentry
-#
+
 # sentry_sdk.init(
 #     dsn=config['Sentry']['sentry_dsn'],
 #     # Set traces_sample_rate to 1.0 to capture 100%
