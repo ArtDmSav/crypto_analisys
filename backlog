@@ -1,0 +1,4 @@
+add update update_time when push get_update_pair
+add button menu after push/stop_update
+take language from DB for lang bot
+find how delete button text together with button

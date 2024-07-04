@@ -1,19 +1,18 @@
 import asyncio
 import logging
 import os
-import re
 from datetime import datetime, timedelta
 
-from telegram import Update, InlineKeyboardMarkup, BotCommand, MenuButtonCommands
+from telegram import Update, BotCommand, MenuButtonCommands
 from telegram.constants import ParseMode
 from telegram.error import TelegramError, TimedOut
 from telegram.ext import CallbackQueryHandler, Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from config.data import BOT_TOKEN, WAIT_BF_DEL_CHART_PNG, ADMIN_USERNAME
-from db.db_connect import add_user, deactivate_user, check_user_exists, get_user_info, \
-    get_last_10_transactions, get_user_list, update_status, update_pair, update_update_time
-from function.keyboard import lang_kb, symbol_kb, interval_kb, newsletter_chart_clbk_kb, \
-    newsletter_chart_msg_kb, update_interval_kb
+from db.db_connect import check_user_exists, get_user_list, update_status, update_pair, update_update_time
+from function.admin_part import add_command_admin, stop_command_admin, u_info_admin, last_10_transaction_admin
+from function.keyboard import symbol_kb, interval_kb, newsletter_chart_clbk_kb, \
+    newsletter_chart_msg_kb, update_interval_kb, language_kb, interval_choose_or_language
 from function.symbol_chart import get_tradingview_screenshot
 from function.trading_request import tr_view_msg, tr_view_bt, price_before_24h, update_tr_view_bt
 from language import ru, en, tr, es
@@ -34,64 +33,15 @@ LANGUAGES = {
 
 
 async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.from_user.username in ADMIN_USERNAME:
-        # Используем регулярное выражение для извлечения аргумента после команды /add
-        match = re.match(r'/add\s+@?(\w{5,32})', update.message.text)
-        await update.message.reply_text(f" {match}")
-        if match:
-            add_value = match.group(1)
-            status = await add_user(add_value)
-
-            match status:
-                case 1:
-                    await update.message.reply_text(f"Вы добавили user: {add_value}")
-                case 2:
-                    await update.message.reply_text(f"User: {add_value}, был добавлен ранне.\n"
-                                                    f"Доступ предоставлен повторно")
-                case 0:
-                    await update.message.reply_text(f"Произошла ошибка записи в БД попробуйте снова")
-
-        else:
-            await update.message.reply_text("Пожалуйста, укажите значение после команды /add длиной до 30 символов.")
-    else:
-        await update.message.reply_text("Вы не являетесь админом бота")
+    await add_command_admin(update, context)
 
 
 async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.from_user.username in ADMIN_USERNAME:
-        # Используем регулярное выражение для извлечения аргумента после команды /add
-        match = re.match(r'/stop\s+@?(\w{5,32})', update.message.text)
-        if match:
-            add_value = match.group(1)
-            status = await deactivate_user(add_value)
-
-            if status:
-                await update.message.reply_text(f"Вы деактивировали user: {add_value}")
-            else:
-                await update.message.reply_text(f"User: {add_value}, не найден!")
-
-        else:
-            await update.message.reply_text("Пожалуйста, укажите значение после команды /stop длиной до 30 символов.")
-    else:
-        await update.message.reply_text("Вы не являетесь админом бота")
+    await stop_command_admin(update, context)
 
 
 async def u_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.from_user.username in ADMIN_USERNAME:
-        # Используем регулярное выражение для извлечения аргумента после команды /add
-        match = re.match(r'/u_info\s+@?(\w{5,32})', update.message.text)
-        if match:
-            add_value = match.group(1)
-            user_info = await get_user_info(add_value)
-
-            if user_info:
-                await update.message.reply_text(user_info)
-            else:
-                await update.message.reply_text("Ошибка запроса в БД")
-        else:
-            await update.message.reply_text("Пожалуйста, укажите значение после команды /u_info.")
-    else:
-        await update.message.reply_text("Вы не являетесь админом бота")
+    await u_info_admin(update, context)
 
 
 async def lst(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -107,22 +57,8 @@ async def lst(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("Вы не являетесь админом бота")
 
 
-async def tr(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.from_user.username in ADMIN_USERNAME:
-        # Используем регулярное выражение для извлечения аргумента после команды /add
-        match = re.match(r'/tr\s+@?(\w{5,32})', update.message.text)
-        if match:
-            add_value = match.group(1)
-            user_info = await get_last_10_transactions(add_value)
-
-            if user_info:
-                await update.message.reply_text(user_info)
-            else:
-                await update.message.reply_text("Ошибка запроса в БД")
-        else:
-            await update.message.reply_text("Пожалуйста, укажите значение после команды /u_tr.")
-    else:
-        await update.message.reply_text("Вы не являетесь админом бота")
+async def transactions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await last_10_transaction_admin(update, context)
 
 
 async def info_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -143,10 +79,29 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     if await check_user_exists(update.message.from_user.username):
         await update_status(update.message.from_user.username, False)
-        reply_markup = InlineKeyboardMarkup(lang_kb)
-        await update.message.reply_html(lang.START_MSG, reply_markup=reply_markup)
+        await interval_choose_or_language(update, context)
+        # await language_kb(update, context)
     else:
         await update.message.reply_text(lang.ACCESS_ERROR)
+
+
+async def set_interval_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+
+    await update.callback_query.edit_message_reply_markup(reply_markup=None)
+    await set_interval(update, context)
+
+
+async def choose_language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+
+    await update.callback_query.edit_message_reply_markup(reply_markup=None)
+    # Создаем объект Update для команды /set_interval
+    command_update = Update(update.update_id, message=update.callback_query.message)
+    # Вызываем обработчик команды /set_interval
+    await language_kb(command_update, context)
 
 
 async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -199,7 +154,7 @@ async def interval_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     context.user_data['interval'] = usr_interval
     await update.callback_query.answer()  # Уведомляем Telegram, что запрос обработан
 
-    # Delete key board
+    # Delete keyboard
     await update.callback_query.edit_message_reply_markup(reply_markup=None)
 
     intervals = {
@@ -437,6 +392,8 @@ def main() -> None:
     application.add_handler(CommandHandler("info_interval", info_interval))
     application.add_handler(CommandHandler("stop_update", stop_update))
 
+    application.add_handler(CallbackQueryHandler(choose_language_callback, pattern='^choose_language$'))
+    application.add_handler(CallbackQueryHandler(set_interval_callback, pattern='^set_interval$'))
     application.add_handler(CallbackQueryHandler(update_data, pattern='^newsletter$'))
     application.add_handler(CallbackQueryHandler(get_chart, pattern='^True$'))
     application.add_handler(CallbackQueryHandler(set_language, pattern='^lang_'))
@@ -448,7 +405,7 @@ def main() -> None:
     application.add_handler(CommandHandler("add", add_command))
     application.add_handler(CommandHandler("stop", stop_command))
     application.add_handler(CommandHandler("u_info", u_info))
-    application.add_handler(CommandHandler("tr", tr))
+    application.add_handler(CommandHandler("tr", transactions))
     application.add_handler(CommandHandler("lst", lst))
 
     # on non command i.e message - echo the message on Telegram

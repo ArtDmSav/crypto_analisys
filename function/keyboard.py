@@ -12,16 +12,35 @@ LANGUAGES = {
     'es': es,
 }
 
-lang_kb = [
-    [
-        InlineKeyboardButton("English", callback_data='lang_en'),
-        InlineKeyboardButton("Español", callback_data='lang_es')
-    ],
-    [
-        InlineKeyboardButton("Türkçe", callback_data='lang_tr'),
-        InlineKeyboardButton("Русский", callback_data='lang_ru')
-    ],
-]
+
+async def interval_choose_or_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_language = context.user_data.get('language', 'es')
+    lang = LANGUAGES[user_language]
+
+    reply_markup = InlineKeyboardMarkup([[
+        InlineKeyboardButton(lang.CHOOSE_INTERVAL, callback_data="set_interval")],
+        [InlineKeyboardButton(lang.LANGUAGE, callback_data="choose_language")
+         ]])
+
+    await update.message.reply_html(lang.START_MSG, reply_markup=reply_markup)
+
+
+async def language_kb(update, context) -> None:
+    user_language = context.user_data.get('language', 'es')
+    lang = LANGUAGES[user_language]
+
+    lang_kb = [
+        [
+            InlineKeyboardButton("English", callback_data='lang_en'),
+            InlineKeyboardButton("Español", callback_data='lang_es')
+        ],
+        [
+            InlineKeyboardButton("Türkçe", callback_data='lang_tr'),
+            InlineKeyboardButton("Русский", callback_data='lang_ru')
+        ],
+    ]
+    reply_markup = InlineKeyboardMarkup(lang_kb)
+    await update.message.reply_html(lang.LANGUAGE, reply_markup=reply_markup)
 
 
 async def newsletter_chart_msg_kb(recomend: str, price: str, update: Update,
