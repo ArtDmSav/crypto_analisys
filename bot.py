@@ -17,12 +17,7 @@ from function.symbol_chart import get_tradingview_screenshot
 from function.trading_request import tr_view_msg, tr_view_bt, price_before_24h, update_tr_view_bt
 from language import ru, en, tr, es
 
-# Enable logging
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.WARNING
-)
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logger = logging.getLogger(__name__)
+logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
 
 LANGUAGES = {
     'en': en,

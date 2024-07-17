@@ -8,7 +8,7 @@ from sqlalchemy.orm import declarative_base
 DATABASE_URL = "postgresql+asyncpg://admin:password@localhost/crypto"
 
 # Создаем движок базы данных
-engine = create_async_engine(DATABASE_URL, echo=True)
+engine = create_async_engine(DATABASE_URL, echo=False)
 
 # Создаем базовый класс для объявлений моделей
 Base = declarative_base()
