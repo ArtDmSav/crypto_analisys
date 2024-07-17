@@ -96,7 +96,6 @@ async def update_pair() -> list:
                 }
                 for user in users
             ]
-            print(users_info)
             return users_info
 
 
@@ -109,7 +108,6 @@ async def update_status(username: str, status: bool, update_interval: int = 8640
             user = result.scalars().first()
 
             if user is None:
-                print(f"User with username {username} not found.")
                 return
 
             # Обновление полtq
@@ -128,7 +126,6 @@ async def update_update_time(chat_id: int, update_time: datetime) -> None:
             user = result.scalars().first()
 
             if user is None:
-                print(f"User with username {chat_id} not found.")
                 return
 
             # Обновление поле
@@ -174,7 +171,6 @@ async def write_transaction(username: str,
                             chat_id: int = 0,
                             datatime=datetime.now()
                             ) -> None:
-    print(f"\n\nwrite_transaction\nchat_id = {chat_id}\n\n")
     try:
         async with async_session() as session:
             async with session.begin():
