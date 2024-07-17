@@ -329,19 +329,46 @@ async def update_loop(application: Application) -> None:
                     recomend = await update_tr_view_bt(user['trading_pair'], lang, user['interval'])
                     await update_update_time(user['chat_id'], now)
                     try:
+                        trading_pair = user['trading_pair'].replace('&', '&amp;').replace('<', '&lt;').replace('>',
+                                                                                                               '&gt;').replace(
+                            '"', '&quot;')
+                        pair_price = lang.PAIR_PRICE.replace('&', '&amp;').replace('<', '&lt;').replace('>',
+                                                                                                        '&gt;').replace(
+                            '"', '&quot;')
+                        pair_change = lang.PAIR_CHANGE.replace('&', '&amp;').replace('<', '&lt;').replace('>',
+                                                                                                          '&gt;').replace(
+                            '"', '&quot;')
+                        pair_max = lang.PAIR_MAX.replace('&', '&amp;').replace('<', '&lt;').replace('>',
+                                                                                                    '&gt;').replace('"',
+                                                                                                                    '&quot;')
+                        pair_min = lang.PAIR_MIN.replace('&', '&amp;').replace('<', '&lt;').replace('>',
+                                                                                                    '&gt;').replace('"',
+                                                                                                                    '&quot;')
+                        stop_update = lang.STOP_UPDATE.replace('&', '&amp;').replace('<', '&lt;').replace('>',
+                                                                                                          '&gt;').replace(
+                            '"', '&quot;')
+                        recomend_escaped = recomend.replace('&', '&amp;').replace('<', '&lt;').replace('>',
+                                                                                                       '&gt;').replace(
+                            '"', '&quot;')
+
+                        # Формирование сообщения
+                        message = (
+                            f"📊<b>{trading_pair}{pair_price}:</b> {price}\n"
+                            f"<b>-------------------------------</b>\n\n"
+                            f"↕️<b>{pair_change}:</b> {price_change_percent}%\n"
+                            f"📈<b>{pair_max}:</b> {max_price}\n"
+                            f"📉<b>{pair_min}:</b> {min_price}\n"
+                            f"{recomend_escaped}\n"
+                            f"{stop_update}/stop_update"
+                        )
+
                         await application.bot.send_message(chat_id=user['chat_id'],
-                                                           text=f"\n\n-------------------------------\n"
-                                                                f"📊*{user['trading_pair']}{lang.PAIR_PRICE}:* {price}\n"
-                                                                f"-------------------------------\n\n"
-                                                                f"↕️*{lang.PAIR_CHANGE}:* {price_change_percent}%\n"
-                                                                f"📈*{lang.PAIR_MAX}:* {max_price}\n"
-                                                                f"📉*{lang.PAIR_MIN}:* {min_price}\n",
-                                                           parse_mode=ParseMode.MARKDOWN
-                                                           )
-                        await application.bot.send_message(chat_id=user['chat_id'],
-                                                           text=f"{recomend}\n"
-                                                                f"{lang.STOP_UPDATE}/stop_update")
-                        print(f"{user['chat_id']} {user['trading_pair']} = {price}")
+                                                           text=message,
+                                                           parse_mode='HTML')
+                        # await application.bot.send_message(chat_id=user['chat_id'],
+                        #                                    text=f"{recomend}\n"
+                        #                                         f"{lang.STOP_UPDATE}/stop_update")
+                        print(f"{user['username']} {user['trading_pair']} = {price} in {datetime.now()}")
                     except TimedOut as e:
                         print(f"{e} --------- error")
 
