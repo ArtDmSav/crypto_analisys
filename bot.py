@@ -19,7 +19,7 @@ from language import ru, en, tr, es
 
 # Enable logging
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.WARNING
 )
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -346,6 +346,7 @@ async def update_loop(application: Application) -> None:
                         await application.bot.send_message(chat_id=user['chat_id'],
                                                            text=f"{recomend}\n"
                                                                 f"{lang.STOP_UPDATE}/stop_update")
+                        print(f"{user['chat_id']} {user['trading_pair']} = {price}")
                     except TimedOut as e:
                         print(f"{e} --------- error")
 
