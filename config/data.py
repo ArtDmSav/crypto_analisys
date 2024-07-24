@@ -5,7 +5,7 @@ from pathlib import Path
 dir_path = Path.cwd().parent
 path = Path(dir_path, 'config', 'config.ini')
 config = configparser.ConfigParser()
-print(path)
+print(path, '  ?')
 config.read(path)
 
 # Constants
