@@ -2,10 +2,9 @@ import configparser
 from pathlib import Path
 
 # Absolut path
-dir_path = Path.cwd().parent
+dir_path = Path.cwd()
 path = Path(dir_path, 'config', 'config.ini')
 config = configparser.ConfigParser()
-print(path, '  ?')
 config.read(path)
 
 # Constants
