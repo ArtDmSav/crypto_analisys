@@ -38,6 +38,7 @@ async def del_all_operations(update: Update, context: ContextTypes.DEFAULT_TYPE)
     else:
         await update.message.reply_text("Вы не являетесь админом бота")
 
+
 async def del_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message.from_user.username in ADMIN_USERNAME:
         # Используем регулярное выражение для извлечения аргумента после команды /del_user
@@ -64,10 +65,9 @@ async def add_command_admin(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if update.message.from_user.username in ADMIN_USERNAME:
         # Используем регулярное выражение для извлечения аргумента после команды /add
         match = re.match(r'/add\s+@?(\w{5,32})', update.message.text)
-        await update.message.reply_text(f" {match}")
         if match:
             add_value = match.group(1)
-            status = await add_user(add_value)
+            status = await add_user(add_value, update)
 
             match status:
                 case 1:

@@ -4,6 +4,7 @@ from sqlalchemy import update, func, delete
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.future import select
 from sqlalchemy.orm import declarative_base
+from telegram import Update
 
 from db.db_create import Operations, User
 
@@ -20,6 +21,7 @@ async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 
 async def add_user(username: str,
+                   update: Update,
                    language='xz',
                    registration_datetime=func.now(),
                    last_activity_datetime=func.now()) -> int:
@@ -51,6 +53,7 @@ async def add_user(username: str,
                 await session.commit()
                 return 1
     except Exception as e:
+        await update.message.reply_text(f"error: {e}")
         return 0
 
 
