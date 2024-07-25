@@ -1,12 +1,11 @@
 from datetime import datetime
 
-import sqlalchemy as sa
-from sqlalchemy import update
+from sqlalchemy import update, func
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.future import select
 from sqlalchemy.orm import declarative_base
 
-from db.db_create import Operations
+from db.db_create import Operations, User
 
 DATABASE_URL = "postgresql+asyncpg://admin:password@localhost/crypto"
 
@@ -16,34 +15,14 @@ engine = create_async_engine(DATABASE_URL, echo=False)
 # Создаем базовый класс для объявлений моделей
 Base = declarative_base()
 
-
-# Определяем модель для таблицы user
-class User(Base):
-    __tablename__ = 'user'
-
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    username = sa.Column(sa.String(30), nullable=False)
-    registration_datetime = sa.Column(sa.DateTime, nullable=False)
-    status = sa.Column(sa.Integer, default=1)
-    last_activity_datetime = sa.Column(sa.DateTime)
-    language = sa.Column(sa.String(5))
-    account_id = sa.Column(sa.Integer, default=0)
-    update_status = sa.Column(sa.Boolean, nullable=False, default=False)
-    update_interval = sa.Column(sa.Integer, nullable=False, default=0)
-    update_time = sa.Column(sa.DateTime, nullable=False, default=datetime.now)
-    interval = sa.Column(sa.String(5), nullable=False, default="1h")
-    trading_pair = sa.Column(sa.String(10), nullable=False, default="BTCUSDT")
-    chat_id = sa.Column(sa.BigInteger, default=0)
-
-
 # Создаем асинхронную сессию
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 
 async def add_user(username: str,
                    language='xz',
-                   registration_datetime=datetime.now(),
-                   last_activity_datetime=datetime.now()) -> int:
+                   registration_datetime=func.now(),
+                   last_activity_datetime=func.now()) -> int:
     try:
         async with async_session() as session:
             async with session.begin():
@@ -54,7 +33,9 @@ async def add_user(username: str,
 
                 if user:
                     # Обновляем статус пользователя
-                    user.status = 1
+
+                    user.registration_datetime = func.now(),
+                    user.status = 720
                     await session.commit()
                     return 2
 
@@ -63,7 +44,8 @@ async def add_user(username: str,
                     username=username,
                     registration_datetime=registration_datetime,
                     last_activity_datetime=last_activity_datetime,
-                    language=language
+                    language=language,
+                    status=720
                 )
                 session.add(new_user)
                 await session.commit()
@@ -137,7 +119,7 @@ async def update_update_time(chat_id: int, update_time: datetime) -> None:
 async def check_user_exists(username: str) -> bool:
     async with async_session() as session:
         async with session.begin():
-            query = select(User).where(User.username == username, User.status == 1)
+            query = select(User).where(User.username == username, User.status > 0)
             result = await session.execute(query)
             user = result.scalars().first()
 
@@ -206,6 +188,25 @@ async def write_transaction(username: str,
                 print(f"Transaction for user {username} added successfully.")
     except Exception as e:
         print(e)
+
+
+async def delete_user(username: str) -> bool:
+    async with async_session() as session:
+        async with session.begin():
+            # Поиск пользователя по username
+            query = select(User).where(User.username == username)
+            result = await session.execute(query)
+            user = result.scalars().first()
+
+            if user is None:
+                print(f"User with username {username} not found.")
+                return False
+
+            # Удаление пользователя
+            await session.delete(user)
+            await session.commit()
+            print(f"User {username} deleted successfully.")
+            return True
 
 
 async def get_user_info(username: str) -> str:
@@ -305,3 +306,61 @@ async def get_user_list() -> str:
     except Exception as e:
         print(e)
         return ''
+
+
+async def add_user_24_access(username: str, language: str = 'xz') -> None:
+    async with async_session() as session:
+        async with session.begin():
+            # Поиск пользователя по username
+            query = select(User).where(User.username == username)
+            result = await session.execute(query)
+            user = result.scalars().first()
+
+            if user is None:
+                # Создание нового пользователя
+                new_user = User(
+                    username=username,
+                    registration_datetime=func.now(),
+                    last_activity_datetime=func.now(),
+                    language=language,
+                    status=24
+                )
+                session.add(new_user)
+                await session.commit()
+                print(f"New user {username} created.")
+            else:
+                print(f"User with username {username} already exists.")
+
+
+async def check_users_for_finsh_time() -> None:
+    async with async_session() as session:
+        async with session.begin():
+            # Получение текущего времени
+            now = datetime.now()
+
+            # Обработка пользователей со статусом 24
+            result_24 = await session.execute(select(User).where(User.status == 24))
+            users_24 = result_24.scalars().all()
+
+            for user in users_24:
+                time_difference = now - user.registration_datetime
+                hours_difference = time_difference.total_seconds() / 3600
+
+                if hours_difference > user.status:
+                    user.status = 0
+                    session.add(user)
+
+            # Обработка пользователей со статусом 720
+            result_720 = await session.execute(select(User).where(User.status == 720))
+            users_720 = result_720.scalars().all()
+
+            for user in users_720:
+                time_difference = now - user.registration_datetime
+                hours_difference = time_difference.total_seconds() / 3600
+
+                if hours_difference > user.status:
+                    user.status = -1
+                    session.add(user)
+
+            # Подтверждение всех изменений в транзакции
+            await session.commit()

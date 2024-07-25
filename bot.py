@@ -8,9 +8,10 @@ from telegram.constants import ParseMode
 from telegram.error import TelegramError, TimedOut
 from telegram.ext import CallbackQueryHandler, Application, CommandHandler, ContextTypes, MessageHandler, filters
 
-from config.data import BOT_TOKEN, WAIT_BF_DEL_CHART_PNG, ADMIN_USERNAME
-from db.db_connect import check_user_exists, get_user_list, update_status, update_pair, update_update_time
-from function.admin_part import add_command_admin, stop_command_admin, u_info_admin, last_10_transaction_admin
+from config.data import BOT_TOKEN, WAIT_BF_DEL_CHART_PNG, SLEEP_TIME, DAY_COUNT
+from db.db_connect import check_user_exists, update_status, update_pair, update_update_time, check_users_for_finsh_time
+from function.admin_part import add_command_admin, stop_command_admin, u_info_admin, admin, \
+    lst, del_user
 from function.keyboard import symbol_kb, interval_kb, newsletter_chart_clbk_kb, \
     newsletter_chart_msg_kb, update_interval_kb, language_kb, interval_choose_or_language
 from function.symbol_chart import get_tradingview_screenshot
@@ -27,33 +28,9 @@ LANGUAGES = {
 }
 
 
-async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await add_command_admin(update, context)
-
-
-async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await stop_command_admin(update, context)
-
-
-async def u_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await u_info_admin(update, context)
-
-
-async def lst(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.from_user.username in ADMIN_USERNAME:
-        users_list = await get_user_list()
-
-        if users_list:
-            await update.message.reply_text(users_list)
-        else:
-            await update.message.reply_text("Ошибка запроса в БД")
-
-    else:
-        await update.message.reply_text("Вы не являетесь админом бота")
-
-
 async def transactions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await last_10_transaction_admin(update, context)
+    # await last_10_transaction_admin(update, context)
+    pass
 
 
 async def info_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -77,6 +54,8 @@ async def info_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
+
+    # check in db if empty add with status 24
 
     if await check_user_exists(update.message.from_user.username):
         await update_status(update.message.from_user.username, False)
@@ -318,7 +297,9 @@ async def update_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 
 async def update_loop(application: Application) -> None:
+    count = 0
     while True:
+        count += 1
         users = await update_pair()
         now = datetime.now()
         for user in users:
@@ -375,10 +356,16 @@ async def update_loop(application: Application) -> None:
             except TelegramError as e:
                 await update_status(user["username"], False)
                 print(f"------------------------{e}----------------------")
-        await asyncio.sleep(10)
+        if count >= DAY_COUNT:
+            count = 0
+            await check_users_for_finsh_time()
+        await asyncio.sleep(SLEEP_TIME)
 
 
 async def stop_update(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_language = context.user_data.get('language', 'es')
+    lang = LANGUAGES[user_language]
+
     try:
         await update_status(update.message.from_user.username, False)
         await update.message.reply_text(lang.UPDATE_WAS_STOPPED)
@@ -433,10 +420,12 @@ def main() -> None:
     application.add_handler(CallbackQueryHandler(interval_choice))
 
     # обработчики команд админа
-    application.add_handler(CommandHandler("add", add_command))
-    application.add_handler(CommandHandler("stop", stop_command))
-    application.add_handler(CommandHandler("u_info", u_info))
+    application.add_handler(CommandHandler("add", add_command_admin))
+    application.add_handler(CommandHandler("stop", stop_command_admin))
+    application.add_handler(CommandHandler("admin", admin))
+    application.add_handler(CommandHandler("u_info", u_info_admin))
     application.add_handler(CommandHandler("tr", transactions))
+    application.add_handler(CommandHandler("del_user", del_user))
     application.add_handler(CommandHandler("lst", lst))
 
     # on non command i.e message - echo the message on Telegram

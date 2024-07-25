@@ -2,7 +2,6 @@ from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
 from tradingview_ta import Interval
 
-from db.db_connect import write_transaction
 from language import en, ru, tr, es
 
 LANGUAGES = {
@@ -56,12 +55,12 @@ async def newsletter_chart_msg_kb(recomend: str, price: str, update: Update,
 
     await update.message.reply_html(recomend, reply_markup=reply_markup)
     # await update.message.reply_text(lang.CHANGE_INTERVAL)
-    await write_transaction(update.message.from_user.username,
-                            context.user_data.get("interval", Interval.INTERVAL_1_HOUR),
-                            trading_pair,
-                            price,
-                            context.user_data.get('language', 'es'),
-                            update.message.chat.id)
+    # await write_transaction(update.message.from_user.username,
+    #                         context.user_data.get("interval", Interval.INTERVAL_1_HOUR),
+    #                         trading_pair,
+    #                         price,
+    #                         context.user_data.get('language', 'es'),
+    #                         update.message.chat.id)
     await symbol_kb(update, context)
 
 
@@ -78,12 +77,12 @@ async def newsletter_chart_clbk_kb(recomend: str, price: str, update: Update,
 
     await update.callback_query.message.reply_html(recomend, reply_markup=reply_markup)
     # await update.callback_query.message.reply_text(lang.CHANGE_INTERVAL)
-    await write_transaction(update.callback_query.from_user.username,
-                            context.user_data.get("interval", Interval.INTERVAL_1_HOUR),
-                            trading_pair,
-                            price,
-                            context.user_data.get('language', 'es'),
-                            update.callback_query.message.chat.id)
+    # await write_transaction(update.callback_query.from_user.username,
+    #                         context.user_data.get("interval", Interval.INTERVAL_1_HOUR),
+    #                         trading_pair,
+    #                         price,
+    #                         context.user_data.get('language', 'es'),
+    #                         update.callback_query.message.chat.id)
     await symbol_kb(update, context)
 
 
