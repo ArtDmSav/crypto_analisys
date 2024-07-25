@@ -278,6 +278,13 @@ async def update_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     except Exception as e:
         print(2, e)
+    try:
+        await context.bot.delete_message(chat_id=update.callback_query.from_user.id,
+                                         message_id=context.user_data['symbol_kb_msg_id'])
+
+    except Exception as e:
+        print(3, e)
+
     # await update_status(update.callback_query.from_user.username, True)
     await update_interval_kb(update, context)
 
@@ -293,7 +300,7 @@ async def update_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                                          message_id=context.user_data['update_interval_kb_msg_id'])
 
     except Exception as e:
-        print(3, e)
+        print(4, e)
 
     # Delete keyboard
     # await update.callback_query.edit_message_reply_markup(reply_markup=None)
@@ -303,7 +310,6 @@ async def update_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await update_status(update.callback_query.from_user.username, True, int(query.data))
 
     await update.callback_query.message.reply_text(lang.SET_UPDATE)
-
 
 
 async def update_loop(application: Application) -> None:
@@ -365,7 +371,7 @@ async def update_loop(application: Application) -> None:
 
             except TelegramError as e:
                 await update_status(user["username"], False)
-                print(f"------------------------{e}----------------------")
+                print(f"------------------------{e}----------------------\n{user['username']}")
         if count >= DAY_COUNT:
             count = 0
             await check_users_for_finsh_time()

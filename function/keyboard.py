@@ -172,12 +172,12 @@ async def symbol_kb(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     if update.message:
-        await update.message.reply_text(lang.CHOOSE_PAIR, reply_markup=reply_markup)
-
+        msg = await update.message.reply_text(lang.CHOOSE_PAIR, reply_markup=reply_markup)
+        context.user_data['symbol_kb_msg_id'] = msg.message_id
     elif update.callback_query:
         try:
-            await update.callback_query.message.reply_text(lang.CHOOSE_PAIR,
-                                                           reply_markup=reply_markup)
+            msg = await update.callback_query.message.reply_text(lang.CHOOSE_PAIR, reply_markup=reply_markup)
+            context.user_data['symbol_kb_msg_id'] = msg.message_id
         except Exception as e:
             await update.callback_query.edit_message_text(lang.MSG_ERROR)
             print(e)
