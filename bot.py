@@ -8,25 +8,17 @@ from telegram.constants import ParseMode
 from telegram.error import TelegramError, TimedOut
 from telegram.ext import CallbackQueryHandler, Application, CommandHandler, ContextTypes, MessageHandler, filters
 
-from config.data import BOT_TOKEN, WAIT_BF_DEL_CHART_PNG, SLEEP_TIME, DAY_COUNT
+from config.data import BOT_TOKEN, WAIT_BF_DEL_CHART_PNG, SLEEP_TIME, DAY_COUNT, DEFAULT_LANGUAGE, LANGUAGES
 from db.db_connect import check_user_exists, update_status, update_pair, update_update_time, check_users_for_finsh_time, \
-    add_user_24_access
+    add_user_24_access, find_and_set_lang, update_user_language
 from function.admin_part import add_command_admin, stop_command_admin, u_info_admin, admin, \
     lst, del_user, del_all_operations
 from function.keyboard import symbol_kb, interval_kb, newsletter_chart_clbk_kb, \
     newsletter_chart_msg_kb, update_interval_kb, language_kb, interval_choose_or_language
 from function.symbol_chart import get_tradingview_screenshot
 from function.trading_request import tr_view_msg, tr_view_bt, price_before_24h, update_tr_view_bt
-from language import ru, en, tr, es
 
 logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
-
-LANGUAGES = {
-    'en': en,
-    'ru': ru,
-    'tr': tr,
-    'es': es,
-}
 
 
 async def transactions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -35,26 +27,27 @@ async def transactions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def info_bot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
+
     await update.message.reply_text(lang.INFO_BOT)
 
 
 async def support(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
     await update.message.reply_text(lang.SUPPORT_USERNAME)
 
 
 async def info_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
     await update.message.reply_text(lang.INFO_INTERVAL)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
 
     await add_user_24_access(update.message.from_user.username)
 
@@ -69,16 +62,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def set_interval_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
-
-    await update.callback_query.edit_message_reply_markup(reply_markup=None)
     await set_interval(update, context)
 
 
 async def choose_language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
+    try:
+        await context.bot.delete_message(chat_id=update.callback_query.from_user.id,
+                                         message_id=context.user_data['interval_choose_or_language_msg_id'])
 
-    await update.callback_query.edit_message_reply_markup(reply_markup=None)
+    except Exception as e:
+        print(1, e)
     # Создаем объект Update для команды /set_interval
     command_update = Update(update.update_id, message=update.callback_query.message)
     # Вызываем обработчик команды /set_interval
@@ -99,8 +94,11 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             context.user_data['language'] = 'tr'
         case 'lang_ru':
             context.user_data['language'] = 'ru'
+        case _:
+            context.user_data['language'] = DEFAULT_LANGUAGE
 
     lang = LANGUAGES[context.user_data['language']]
+    await update_user_language(update.callback_query.from_user.username, context.user_data['language'])
     await query.edit_message_text(lang.START_MSG)
     await set_interval(update, context)
 
@@ -109,8 +107,8 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def set_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
     if update.callback_query and await check_user_exists(update.callback_query.from_user.username):
         await update_status(update.callback_query.from_user.username, False)
         await interval_kb(update, context)
@@ -125,8 +123,8 @@ async def set_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def interval_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
 
     query = update.callback_query
     await query.answer()
@@ -167,8 +165,8 @@ async def interval_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 
 async def analisys(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
 
     error = False
     if update.callback_query and await check_user_exists(update.callback_query.from_user.username):
@@ -234,8 +232,8 @@ async def analisys(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def get_chart(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
 
     query = update.callback_query
     await query.answer()
@@ -269,32 +267,43 @@ async def get_chart(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def update_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
-
-    query = update.callback_query
-    await query.answer()
-
-    # Delete keyboard
-    await update.callback_query.edit_message_reply_markup(reply_markup=None)
-
-    # await update_status(update.callback_query.from_user.username, True)
-    await update_interval_kb(update, context)
-
-
-async def update_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
-
     query = update.callback_query
     await query.answer()
 
     # Delete keyboard
     # await update.callback_query.edit_message_reply_markup(reply_markup=None)
+    try:
+        await context.bot.delete_message(chat_id=update.callback_query.from_user.id,
+                                         message_id=context.user_data['newsletter_chart_msg_id'])
+
+    except Exception as e:
+        print(2, e)
+    # await update_status(update.callback_query.from_user.username, True)
+    await update_interval_kb(update, context)
+
+
+async def update_interval(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
+
+    query = update.callback_query
+    await query.answer()
+    try:
+        await context.bot.delete_message(chat_id=update.callback_query.from_user.id,
+                                         message_id=context.user_data['update_interval_kb_msg_id'])
+
+    except Exception as e:
+        print(3, e)
+
+    # Delete keyboard
+    # await update.callback_query.edit_message_reply_markup(reply_markup=None)
     # Удаляем текст и клавиатуру
-    await update.callback_query.edit_message_text(text=f"{lang.UPDATE_INTERVAL}", reply_markup=None)
+    # await update.callback_query.edit_message_text(text=f"{lang.UPDATE_INTERVAL}", reply_markup=None)
 
     await update_status(update.callback_query.from_user.username, True, int(query.data))
+
+    await update.callback_query.message.reply_text(lang.SET_UPDATE)
+
 
 
 async def update_loop(application: Application) -> None:
@@ -364,8 +373,8 @@ async def update_loop(application: Application) -> None:
 
 
 async def stop_update(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
 
     try:
         await update_status(update.message.from_user.username, False)
@@ -392,8 +401,7 @@ async def set_bot_commands(application: Application, language: str) -> None:
 
 async def on_startup(application: Application) -> None:
     # Set default language to Espan if not specified
-    default_language = 'es'
-    await set_bot_commands(application, default_language)
+    await set_bot_commands(application, DEFAULT_LANGUAGE)
     asyncio.create_task(update_loop(application))
 
 

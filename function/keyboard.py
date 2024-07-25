@@ -2,31 +2,26 @@ from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
 from tradingview_ta import Interval
 
-from language import en, ru, tr, es
-
-LANGUAGES = {
-    'en': en,
-    'ru': ru,
-    'tr': tr,
-    'es': es,
-}
+from config.data import LANGUAGES
+from db.db_connect import find_and_set_lang
 
 
 async def interval_choose_or_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
 
     reply_markup = InlineKeyboardMarkup([[
         InlineKeyboardButton(lang.CHOOSE_INTERVAL, callback_data="set_interval")],
         [InlineKeyboardButton(lang.LANGUAGE, callback_data="choose_language")
          ]])
 
-    await update.message.reply_html(lang.START_MSG, reply_markup=reply_markup)
+    msg = await update.message.reply_html(lang.START_MSG, reply_markup=reply_markup)
+    context.user_data['interval_choose_or_language_msg_id'] = msg.message_id
 
 
 async def language_kb(update, context) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
 
     lang_kb = [
         [
@@ -44,8 +39,8 @@ async def language_kb(update, context) -> None:
 
 async def newsletter_chart_msg_kb(recomend: str, price: str, update: Update,
                                   context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
     trading_pair = context.user_data.get('trading_pair', 'BTCUSDT')
 
     reply_markup = InlineKeyboardMarkup([[
@@ -53,7 +48,8 @@ async def newsletter_chart_msg_kb(recomend: str, price: str, update: Update,
         [InlineKeyboardButton(lang.GET_CHART, callback_data="True")
          ]])
 
-    await update.message.reply_html(recomend, reply_markup=reply_markup)
+    msg = await update.message.reply_html(recomend, reply_markup=reply_markup)
+    context.user_data['newsletter_chart_msg_id'] = msg.message_id
     # await update.message.reply_text(lang.CHANGE_INTERVAL)
     # await write_transaction(update.message.from_user.username,
     #                         context.user_data.get("interval", Interval.INTERVAL_1_HOUR),
@@ -66,8 +62,8 @@ async def newsletter_chart_msg_kb(recomend: str, price: str, update: Update,
 
 async def newsletter_chart_clbk_kb(recomend: str, price: str, update: Update,
                                    context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
     trading_pair = context.user_data.get('trading_pair', 'BTCUSDT')
 
     reply_markup = InlineKeyboardMarkup([[
@@ -75,7 +71,8 @@ async def newsletter_chart_clbk_kb(recomend: str, price: str, update: Update,
         [InlineKeyboardButton(lang.GET_CHART, callback_data="True")
          ]])
 
-    await update.callback_query.message.reply_html(recomend, reply_markup=reply_markup)
+    msg = await update.callback_query.message.reply_html(recomend, reply_markup=reply_markup)
+    context.user_data['newsletter_chart_msg_id'] = msg.message_id
     # await update.callback_query.message.reply_text(lang.CHANGE_INTERVAL)
     # await write_transaction(update.callback_query.from_user.username,
     #                         context.user_data.get("interval", Interval.INTERVAL_1_HOUR),
@@ -87,8 +84,8 @@ async def newsletter_chart_clbk_kb(recomend: str, price: str, update: Update,
 
 
 async def update_interval_kb(update, context) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
 
     reply_markup = InlineKeyboardMarkup([
         [
@@ -103,12 +100,13 @@ async def update_interval_kb(update, context) -> None:
             InlineKeyboardButton(lang.DAY_1, callback_data="86400"),
         ],
     ])
-    await update.callback_query.message.reply_html(lang.UPDATE_INTERVAL, reply_markup=reply_markup)
+    msg = await update.callback_query.message.reply_html(lang.UPDATE_INTERVAL, reply_markup=reply_markup)
+    context.user_data['update_interval_kb_msg_id'] = msg.message_id
 
 
 async def interval_kb(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
 
     keyboard = [
         [
@@ -156,8 +154,8 @@ async def interval_kb(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 
 async def symbol_kb(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_language = context.user_data.get('language', 'es')
-    lang = LANGUAGES[user_language]
+    await find_and_set_lang(update, context)
+    lang = LANGUAGES[context.user_data['language']]
 
     keyboard = [
         [

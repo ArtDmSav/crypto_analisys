@@ -5,7 +5,9 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.future import select
 from sqlalchemy.orm import declarative_base
 from telegram import Update
+from telegram.ext import ContextTypes
 
+from config.data import DEFAULT_LANGUAGE
 from db.db_create import Operations, User
 
 DATABASE_URL = "postgresql+asyncpg://admin:password@localhost/crypto"
@@ -178,18 +180,37 @@ async def write_transaction(username: str,
                 session.add(user)
 
                 # Создание новой операции
-                new_operation = Operations(
-                    user_id=user.id,
-                    datetime=datatime,
-                    interval=interval,
-                    trading_pair=trading_pair,
-                    price=price
-                )
-                session.add(new_operation)
+                # new_operation = Operations(
+                #     user_id=user.id,
+                #     datetime=datatime,
+                #     interval=interval,
+                #     trading_pair=trading_pair,
+                #     price=price
+                # )
+                # session.add(new_operation)
                 await session.commit()
                 print(f"Transaction for user {username} added successfully.")
     except Exception as e:
         print(e)
+
+
+async def update_user_language(username: str, language: str) -> None:
+    async with async_session() as session:
+        async with session.begin():
+            # Поиск пользователя по username
+            query = select(User).where(User.username == username)
+            result = await session.execute(query)
+            user = result.scalars().first()
+
+            if user is None:
+                print(f"User with username {username} not found.")
+                return
+
+            # Обновление поля language
+            user.language = language
+            session.add(user)
+            await session.commit()
+            print(f"User {username}'s language updated to {language}.")
 
 
 async def delete_user(username: str) -> bool:
@@ -375,3 +396,23 @@ async def delete_all_operations() -> None:
             await session.execute(delete(Operations))
             await session.commit()
             print("All operations deleted successfully.")
+
+
+async def find_and_set_lang(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if 'language' not in context.user_data:
+        try:
+            lang_code = await get_user_language(update.message.from_user.username)
+        except AttributeError:
+            lang_code = await get_user_language(update.callback_query.from_user.username)
+
+        context.user_data['language'] = lang_code if lang_code else DEFAULT_LANGUAGE
+
+
+async def get_user_language(username: str) -> str:
+    async with async_session() as session:
+        async with session.begin():
+            result = await session.execute(
+                select(User.language).where(User.username == username)
+            )
+            language = result.scalar_one_or_none()
+            return language if language is not None else ''

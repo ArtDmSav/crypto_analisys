@@ -51,3 +51,5 @@ CHOOSE_INTERVAL = "Elegir intervalo"
 LANGUAGE = "Language 🇹🇷🇬🇧🇷🇺"
 SUPPORT_USERNAME = "@pxbt_bot"
 SUPPORT = "Soporte"
+SET_UPDATE = ("¡El intervalo de actualización se ha establecido con éxito!\n"
+              "¡Ahora recibirás actualizaciones para tu par con la frecuencia establecida!")

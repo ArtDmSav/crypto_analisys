@@ -51,3 +51,5 @@ CHOOSE_INTERVAL = "Choose interval"
 LANGUAGE = "Language 🇹🇷🇬🇧🇷🇺"
 SUPPORT_USERNAME = "@pxbt_bot"
 SUPPORT = "Support"
+SET_UPDATE = ("Update interval successfully set!\n"
+              "You will now receive updates for your pair at the set frequency!")

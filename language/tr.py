@@ -51,3 +51,5 @@ CHOOSE_INTERVAL = "Aralığı seç"
 LANGUAGE = "Language 🇹🇷🇬🇧🇷🇺"
 SUPPORT_USERNAME = "@pxbt_bot"
 SUPPORT = "Destek"
+SET_UPDATE = ("Güncelleme aralığı başarıyla ayarlandı!\n"
+              "Artık çiftiniz için belirlenen sıklıkta güncellemeler alacaksınız!")
