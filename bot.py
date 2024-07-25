@@ -9,7 +9,8 @@ from telegram.error import TelegramError, TimedOut
 from telegram.ext import CallbackQueryHandler, Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 from config.data import BOT_TOKEN, WAIT_BF_DEL_CHART_PNG, SLEEP_TIME, DAY_COUNT
-from db.db_connect import check_user_exists, update_status, update_pair, update_update_time, check_users_for_finsh_time
+from db.db_connect import check_user_exists, update_status, update_pair, update_update_time, check_users_for_finsh_time, \
+    add_user_24_access
 from function.admin_part import add_command_admin, stop_command_admin, u_info_admin, admin, \
     lst, del_user, del_all_operations
 from function.keyboard import symbol_kb, interval_kb, newsletter_chart_clbk_kb, \
@@ -55,7 +56,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_language = context.user_data.get('language', 'es')
     lang = LANGUAGES[user_language]
 
-    # check in db if empty add with status 24
+    await add_user_24_access(update.message.from_user.username)
 
     if await check_user_exists(update.message.from_user.username):
         await update_status(update.message.from_user.username, False)
