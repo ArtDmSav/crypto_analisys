@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import update, func
+from sqlalchemy import update, func, delete
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.future import select
 from sqlalchemy.orm import declarative_base
@@ -364,3 +364,12 @@ async def check_users_for_finsh_time() -> None:
 
             # Подтверждение всех изменений в транзакции
             await session.commit()
+
+
+async def delete_all_operations() -> None:
+    async with async_session() as session:
+        async with session.begin():
+            # Удаление всех записей из таблицы operations
+            await session.execute(delete(Operations))
+            await session.commit()
+            print("All operations deleted successfully.")

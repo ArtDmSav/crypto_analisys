@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from config.data import ADMIN_USERNAME
-from db.db_connect import add_user, deactivate_user, get_user_info, get_user_list, delete_user
+from db.db_connect import add_user, deactivate_user, get_user_info, get_user_list, delete_user, delete_all_operations
 
 
 async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -32,17 +32,26 @@ async def lst(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("Вы не являетесь админом бота")
 
 
+async def del_all_operations(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.username in ADMIN_USERNAME:
+        await delete_all_operations()
+    else:
+        await update.message.reply_text("Вы не являетесь админом бота")
+
 async def del_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message.from_user.username in ADMIN_USERNAME:
         # Используем регулярное выражение для извлечения аргумента после команды /del_user
         match = re.match(r'/del_user\s+@?(\w{5,32})', update.message.text)
-        await update.message.reply_text(f" {match}")
         if match:
             username = match.group(1)
-            if await delete_user(username):
-                await update.message.reply_text(f"@{username} успешно удален из БД")
-            else:
-                await update.message.reply_text(f"Ошибка\n@{username} НЕ БЫЛ удален из БД")
+            try:
+                if await delete_user(username):
+
+                    await update.message.reply_text(f"@{username} успешно удален из БД")
+                else:
+                    await update.message.reply_text(f"Ошибка\n@{username} НЕ БЫЛ удален из БД")
+            except Exception as e:
+                await update.message.reply_text(f"Ошибка\n@{username} НЕ БЫЛ удален из БД\n{e}")
 
         else:
             await update.message.reply_text("Пожалуйста, укажите значение после команды /add длиной до 30 символов.")

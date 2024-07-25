@@ -11,7 +11,7 @@ from telegram.ext import CallbackQueryHandler, Application, CommandHandler, Cont
 from config.data import BOT_TOKEN, WAIT_BF_DEL_CHART_PNG, SLEEP_TIME, DAY_COUNT
 from db.db_connect import check_user_exists, update_status, update_pair, update_update_time, check_users_for_finsh_time
 from function.admin_part import add_command_admin, stop_command_admin, u_info_admin, admin, \
-    lst, del_user
+    lst, del_user, del_all_operations
 from function.keyboard import symbol_kb, interval_kb, newsletter_chart_clbk_kb, \
     newsletter_chart_msg_kb, update_interval_kb, language_kb, interval_choose_or_language
 from function.symbol_chart import get_tradingview_screenshot
@@ -426,6 +426,7 @@ def main() -> None:
     application.add_handler(CommandHandler("u_info", u_info_admin))
     application.add_handler(CommandHandler("tr", transactions))
     application.add_handler(CommandHandler("del_user", del_user))
+    application.add_handler(CommandHandler("del_all_operations", del_all_operations))
     application.add_handler(CommandHandler("lst", lst))
 
     # on non command i.e message - echo the message on Telegram
