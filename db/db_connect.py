@@ -23,8 +23,6 @@ async_session = async_sessionmaker(engine, expire_on_commit=False)
 async def add_user(username: str,
                    update: Update,
                    language='xz',
-                   registration_datetime=datetime.now(),
-                   last_activity_datetime=datetime.now(),
                    ) -> int:
     try:
         async with async_session() as session:
@@ -37,7 +35,7 @@ async def add_user(username: str,
                 if user:
                     # Обновляем статус пользователя
 
-                    user.registration_datetime = func.now(),
+                    user.registration_datetime = func.now()
                     user.status = 720
                     await session.commit()
                     return 2
@@ -45,8 +43,8 @@ async def add_user(username: str,
                 # Добавляем нового пользователя
                 new_user = User(
                     username=username,
-                    registration_datetime=registration_datetime,
-                    last_activity_datetime=last_activity_datetime,
+                    registration_datetime=func.now(),
+                    last_activity_datetime=func.now(),
                     language=language,
                     status=720
                 )
