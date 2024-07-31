@@ -317,6 +317,7 @@ async def get_user_list() -> str:
                 # Форматирование данных пользователей в строку
                 users_info = "\n".join(
                     [
+                        f"№ {user.id}\n"
                         f"Username: @{user.username}\n"
                         f"Status: {user.status}\n"
                         f"Last Activity DateTime: {user.last_activity_datetime}\n"
