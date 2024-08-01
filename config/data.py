@@ -33,5 +33,6 @@ LANGUAGES = {
 }
 DEFAULT_LANGUAGE = 'es'
 
-ADMIN_USERNAME = (config['Admin']['admin_1'], config['Admin']['admin_2'], config['Admin']['admin_3'],
-                  config['Admin']['admin_4'])
+# ADMIN_USERNAME = (config['Admin']['admin_1'], config['Admin']['admin_2'], config['Admin']['admin_3'],
+#                   config['Admin']['admin_4'])
+ADMIN_USERNAME = set(value for key, value in config.items('Admin'))
