@@ -194,7 +194,7 @@ async def write_transaction(username: str,
         print(e)
 
 
-async def update_user_language(username: str, language: str) -> None:
+async def update_user_language(username: str, chat_id: int, language: str) -> None:
     async with async_session() as session:
         async with session.begin():
             # Поиск пользователя по username
@@ -208,6 +208,7 @@ async def update_user_language(username: str, language: str) -> None:
 
             # Обновление поля language
             user.language = language
+            user.chat_id = chat_id
             session.add(user)
             await session.commit()
             print(f"User {username}'s language updated to {language}.")
@@ -339,7 +340,7 @@ async def get_user_list() -> str:
         return ''
 
 
-async def add_user_24_access(username: str, language: str = 'xz') -> None:
+async def add_user_24_access(username: str, chat_id: int, language: str = 'xz') -> None:
     async with async_session() as session:
         async with session.begin():
             # Поиск пользователя по username
@@ -351,10 +352,12 @@ async def add_user_24_access(username: str, language: str = 'xz') -> None:
                 # Создание нового пользователя
                 new_user = User(
                     username=username,
+                    chat_id=chat_id,
                     registration_datetime=func.now(),
                     last_activity_datetime=func.now(),
                     language=language,
-                    status=24
+                    status=24,
+
                 )
                 session.add(new_user)
                 await session.commit()

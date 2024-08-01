@@ -49,7 +49,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await find_and_set_lang(update, context)
     lang = LANGUAGES[context.user_data['language']]
 
-    await add_user_24_access(update.message.from_user.username)
+    await add_user_24_access(update.message.from_user.username, update.message.from_user.id)
 
     if await check_user_exists(update.message.from_user.username):
         await update_status(update.message.from_user.username, False)
@@ -98,7 +98,9 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             context.user_data['language'] = DEFAULT_LANGUAGE
 
     lang = LANGUAGES[context.user_data['language']]
-    await update_user_language(update.callback_query.from_user.username, context.user_data['language'])
+    await update_user_language(update.callback_query.from_user.username,
+                               update.callback_query.from_user.id,
+                               context.user_data['language'])
     await query.edit_message_text(lang.START_MSG)
     await set_interval(update, context)
 
