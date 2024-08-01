@@ -252,6 +252,13 @@ async def get_user_info(username: str) -> str:
                     f"Status: {user.status}\n"
                     f"Last Activity DateTime: {user.last_activity_datetime}\n"
                     f"Language: {user.language}\n"
+                    f"account_id: {user.account_id}\n"
+                    f"update_status: {user.update_status}\n"
+                    f"update_interval: {user.update_interval}\n"
+                    f"update_time: {user.update_time}\n"
+                    f"interval: {user.interval}\n"
+                    f"trading_pair: {user.trading_pair}\n"
+                    f"chat_id: {user.chat_id}\n"
                 )
 
                 return user_info
