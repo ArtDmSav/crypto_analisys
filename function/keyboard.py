@@ -3,7 +3,7 @@ from telegram.ext import ContextTypes
 from tradingview_ta import Interval
 
 from config.data import LANGUAGES
-from db.db_connect import find_and_set_lang
+from db.db_connect import find_and_set_lang, write_transaction
 
 
 async def interval_choose_or_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -74,12 +74,12 @@ async def newsletter_chart_clbk_kb(recomend: str, price: str, update: Update,
     msg = await update.callback_query.message.reply_html(recomend, reply_markup=reply_markup)
     context.user_data['newsletter_chart_msg_id'] = msg.message_id
     # await update.callback_query.message.reply_text(lang.CHANGE_INTERVAL)
-    # await write_transaction(update.callback_query.from_user.username,
-    #                         context.user_data.get("interval", Interval.INTERVAL_1_HOUR),
-    #                         trading_pair,
-    #                         price,
-    #                         context.user_data.get('language', 'es'),
-    #                         update.callback_query.message.chat.id)
+    await write_transaction(update.callback_query.from_user.username,
+                            context.user_data.get("interval", Interval.INTERVAL_1_HOUR),
+                            trading_pair,
+                            price,
+                            context.user_data.get('language', 'es'),
+                            update.callback_query.message.chat.id)
     await symbol_kb(update, context)
 
 
