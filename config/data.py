@@ -33,5 +33,5 @@ LANGUAGES = {
 }
 DEFAULT_LANGUAGE = 'es'
 
-ADMIN_USERNAME = (config['Admin']['admin_1'], config['Admin']['admin_2'], config['Admin']['admin_3'])
-
+ADMIN_USERNAME = (config['Admin']['admin_1'], config['Admin']['admin_2'], config['Admin']['admin_3'],
+                  config['Admin']['admin_4'])
