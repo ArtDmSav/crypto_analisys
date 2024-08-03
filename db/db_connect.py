@@ -314,8 +314,8 @@ async def get_user_list() -> str:
     try:
         async with async_session() as session:
             async with session.begin():
-                # Поиск всех пользователей
-                query = select(User)
+                # Поиск всех пользователей и сортировка по id
+                query = select(User).order_by(User.id)
                 result = await session.execute(query)
                 users = result.scalars().all()
 
@@ -334,9 +334,8 @@ async def get_user_list() -> str:
                 )
 
                 return users_info
-
     except Exception as e:
-        print(e)
+        print('error get_user_list : ', e)
         return ''
 
 
