@@ -1,3 +1,4 @@
+import asyncio
 import ssl
 
 import aiohttp
@@ -15,7 +16,7 @@ LANGUAGES = {
 }
 
 
-async def price_before_24h(trading_pair):
+async def price_before_24h(trading_pair: str, first_connect: bool = True) -> set:
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
@@ -56,8 +57,11 @@ async def price_before_24h(trading_pair):
             return max_price, min_price, round(price_change_percent, 2), close_price
         except Exception as e:
             print("error_price_before_24h = ", e)
-
-            return 0, 0, 0, await tr_price(trading_pair)
+            if first_connect:
+                await asyncio.sleep(2)
+                return await price_before_24h(trading_pair, first_connect=False)
+            else:
+                return 0, 0, 0, await tr_price(trading_pair)  # ?????? mb i can del tr_price(trading_pair)
 
 
 async def tr_price(trading_pair):
@@ -116,7 +120,7 @@ async def tr_view_bt(trading_pair, update, context) -> str:
         return ''
 
 
-async def update_tr_view_bt(trading_pair, lang: str, usr_interval: str, ) -> str:
+async def update_tr_view_bt(trading_pair: str, lang: str, usr_interval: str, ) -> str:
     intervals = {
         "1m": lang.MIN_1,
         "5m": lang.MIN_5,
