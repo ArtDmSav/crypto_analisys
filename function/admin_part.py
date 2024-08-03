@@ -20,11 +20,21 @@ async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def lst(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
     if update.message.from_user.username in ADMIN_USERNAME:
         users_list = await get_user_list()
 
         if users_list:
-            await update.message.reply_text(users_list)
+            if len(users_list) <= 4095:
+                await update.message.reply_text(users_list)
+            else:
+                while True:
+                    if len(users_list) <= 4095:
+                        await update.message.reply_text(users_list)
+                        break
+                    await update.message.reply_text(users_list[:4095])
+                    users_list = users_list[4095:]
+
         else:
             await update.message.reply_text("Ошибка запроса в БД")
 
