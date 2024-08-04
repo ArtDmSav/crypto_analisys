@@ -56,11 +56,12 @@ async def price_before_24h(trading_pair: str, first_connect: bool = True) -> set
 
             return max_price, min_price, round(price_change_percent, 2), close_price
         except Exception as e:
-            print("error_price_before_24h = ", e)
             if first_connect:
+                print("first error_price_before_24h = ", e)
                 await asyncio.sleep(2)
                 return await price_before_24h(trading_pair, first_connect=False)
             else:
+                print("error_for_break_price_before_24h = ", e)
                 return 0, 0, 0, await tr_price(trading_pair)  # ?????? mb i can del tr_price(trading_pair)
 
 
