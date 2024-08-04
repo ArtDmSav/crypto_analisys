@@ -53,3 +53,4 @@ SUPPORT_USERNAME = "@pxbt_bot"
 SUPPORT = "Destek"
 SET_UPDATE = ("Güncelleme aralığı başarıyla ayarlandı!\n"
               "Artık çiftiniz için belirlenen sıklıkta güncellemeler alacaksınız!")
+USER_ADD_ERROR = "Ekleme hatası. Kullanıcı adınız gizli ve bota erişim eklemek için uygun değil!"

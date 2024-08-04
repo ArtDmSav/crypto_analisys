@@ -53,3 +53,4 @@ SUPPORT_USERNAME = "@pxbt_bot"
 SUPPORT = "Support"
 SET_UPDATE = ("Update interval successfully set!\n"
               "You will now receive updates for your pair at the set frequency!")
+USER_ADD_ERROR = "Addition error. Your username is hidden and not available for adding access to the bot!"

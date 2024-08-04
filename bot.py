@@ -49,12 +49,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await find_and_set_lang(update, context)
     lang = LANGUAGES[context.user_data['language']]
 
-    await add_user_24_access(update.message.from_user.username, update.message.from_user.id)
+    if update.message.from_user.id:
+        await add_user_24_access(update.message.from_user.username, update.message.from_user.id)
 
-    if await check_user_exists(update.message.from_user.username):
-        await update_status(update.message.from_user.username, False)
-        await interval_choose_or_language(update, context)
-        # await language_kb(update, context)
+        if await check_user_exists(update.message.from_user.username):
+            await update_status(update.message.from_user.username, False)
+            await interval_choose_or_language(update, context)
+            # await language_kb(update, context)
+        else:
+            await update.message.reply_text(lang.ACCESS_ERROR)
     else:
         await update.message.reply_text(lang.ACCESS_ERROR)
 
