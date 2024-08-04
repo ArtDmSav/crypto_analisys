@@ -27,32 +27,35 @@ async def add_user(username: str,
                    language='xz',
                    ) -> int:
     try:
-        async with async_session() as session:
-            async with session.begin():
-                # Проверяем, существует ли пользователь с таким же именем
-                query = select(User).where(User.username == username)
-                result = await session.execute(query)
-                user = result.scalars().first()
+        if username.strip():
+            async with async_session() as session:
+                async with session.begin():
+                    # Проверяем, существует ли пользователь с таким же именем
+                    query = select(User).where(User.username == username)
+                    result = await session.execute(query)
+                    user = result.scalars().first()
 
-                if user:
-                    # Обновляем статус пользователя
+                    if user:
+                        # Обновляем статус пользователя
 
-                    user.registration_datetime = func.now()
-                    user.status = 720
+                        user.registration_datetime = func.now()
+                        user.status = 720
+                        await session.commit()
+                        return 2
+
+                    # Добавляем нового пользователя
+                    new_user = User(
+                        username=username,
+                        registration_datetime=func.now(),
+                        last_activity_datetime=func.now(),
+                        language=language,
+                        status=720
+                    )
+                    session.add(new_user)
                     await session.commit()
-                    return 2
-
-                # Добавляем нового пользователя
-                new_user = User(
-                    username=username,
-                    registration_datetime=func.now(),
-                    last_activity_datetime=func.now(),
-                    language=language,
-                    status=720
-                )
-                session.add(new_user)
-                await session.commit()
-                return 1
+                    return 1
+        else:
+            print('Error: user without username')
     except Exception as e:
         await update.message.reply_text(f"error: {e}")
         return 0
@@ -267,49 +270,6 @@ async def get_user_info(username: str) -> str:
         return ''
 
 
-async def get_last_10_transactions(username: str) -> str:
-    try:
-        async with async_session() as session:
-            async with session.begin():
-                # Поиск пользователя по username
-                query = select(User).where(User.username == username)
-                result = await session.execute(query)
-                user = result.scalars().first()
-
-                if user is None:
-                    return f"User with username {username} not found."
-
-                # Поиск последних 10 транзакций пользователя
-                query = (
-                    select(Operations)
-                    .where(Operations.user_id == user.id)
-                    .order_by(Operations.datetime.desc())
-                    .limit(10)
-                )
-                result = await session.execute(query)
-                transactions = result.scalars().all()
-
-                if not transactions:
-                    return f"No transactions found for user {username}."
-
-                # Форматирование данных транзакций в строку
-                transactions_info = "\n".join(
-                    [
-                        f"Transaction {i + 1}:\n"
-                        f"  DateTime: {txn.datetime}\n"
-                        f"  Interval: {txn.interval}\n"
-                        f"  Trading Pair: {txn.trading_pair}\n"
-                        f"  Price: {txn.price}\n"
-                        for i, txn in enumerate(transactions)
-                    ]
-                )
-
-                return transactions_info
-    except Exception as e:
-        print(e)
-        return ''
-
-
 async def get_user_list() -> str:
     try:
         async with async_session() as session:
@@ -340,29 +300,32 @@ async def get_user_list() -> str:
 
 
 async def add_user_24_access(username: str, chat_id: int, language: str = 'xz') -> None:
-    async with async_session() as session:
-        async with session.begin():
-            # Поиск пользователя по username
-            query = select(User).where(User.username == username)
-            result = await session.execute(query)
-            user = result.scalars().first()
+    if chat_id:
+        async with async_session() as session:
+            async with session.begin():
+                # Поиск пользователя по username
+                query = select(User).where(User.username == username)
+                result = await session.execute(query)
+                user = result.scalars().first()
 
-            if user is None:
-                # Создание нового пользователя
-                new_user = User(
-                    username=username,
-                    chat_id=chat_id,
-                    registration_datetime=func.now(),
-                    last_activity_datetime=func.now(),
-                    language=language,
-                    status=24,
+                if user is None:
+                    # Создание нового пользователя
+                    new_user = User(
+                        username=username,
+                        chat_id=chat_id,
+                        registration_datetime=func.now(),
+                        last_activity_datetime=func.now(),
+                        language=language,
+                        status=24,
 
-                )
-                session.add(new_user)
-                await session.commit()
-                print(f"New user {username} created.")
-            else:
-                print(f"User with username {username} already exists.")
+                    )
+                    session.add(new_user)
+                    await session.commit()
+                    print(f"New user {username} created.")
+                else:
+                    print(f"User with username {username} already exists.")
+    else:
+        print('Error: user without chat_id')
 
 
 async def check_users_for_finsh_time() -> None:
