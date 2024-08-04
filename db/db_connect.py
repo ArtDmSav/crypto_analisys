@@ -372,13 +372,22 @@ async def delete_all_operations() -> None:
 
 
 async def find_and_set_lang(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    username = True
     if 'language' not in context.user_data:
         try:
-            lang_code = await get_user_language(update.message.from_user.username)
+            if update.message.from_user.username:
+                lang_code = await get_user_language(update.message.from_user.username)
+            else:
+                username = False
+                context.user_data['language'] = DEFAULT_LANGUAGE
         except AttributeError:
-            lang_code = await get_user_language(update.callback_query.from_user.username)
-
-        context.user_data['language'] = lang_code if lang_code else DEFAULT_LANGUAGE
+            if update.callback_query.from_user.username:
+                lang_code = await get_user_language(update.callback_query.from_user.username)
+            else:
+                username = False
+                context.user_data['language'] = DEFAULT_LANGUAGE
+        if username:
+            context.user_data['language'] = lang_code if lang_code else DEFAULT_LANGUAGE
 
 
 async def get_user_language(username: str) -> str:

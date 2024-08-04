@@ -59,7 +59,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         else:
             await update.message.reply_text(lang.ACCESS_ERROR)
     else:
-        await update.message.reply_text(lang.ACCESS_ERROR)
+        await update.message.reply_text(lang.USER_ADD_ERROR)
 
 
 async def set_interval_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
