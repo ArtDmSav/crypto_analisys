@@ -50,7 +50,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await find_and_set_lang(update, context)
     lang = LANGUAGES[context.user_data['language']]
 
-    if update.message.from_user.id:
+    if update.message.from_user.username:
         await add_user_24_access(update.message.from_user.username, update.message.from_user.id)
 
         if await check_user_exists(update.message.from_user.username):

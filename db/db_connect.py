@@ -300,7 +300,7 @@ async def get_user_list() -> str:
 
 
 async def add_user_24_access(username: str, chat_id: int, language: str = 'xz') -> None:
-    if chat_id:
+    if chat_id and username:
         async with async_session() as session:
             async with session.begin():
                 # Поиск пользователя по username
@@ -309,6 +309,7 @@ async def add_user_24_access(username: str, chat_id: int, language: str = 'xz') 
                 user = result.scalars().first()
 
                 if user is None:
+
                     # Создание нового пользователя
                     new_user = User(
                         username=username,
@@ -325,7 +326,7 @@ async def add_user_24_access(username: str, chat_id: int, language: str = 'xz') 
                 else:
                     print(f"User with username {username} already exists.")
     else:
-        print('Error: user without chat_id')
+        print('Error: user without username')
 
 
 async def check_users_for_finsh_time() -> None:
