@@ -205,7 +205,8 @@ async def analisys(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update_status(update.callback_query.from_user.username, False)
             await newsletter_chart_clbk_kb(recomend, price, update, context)
 
-    elif await check_user_exists(update.message.from_user.username):
+    elif (await check_user_exists(update.message.from_user.username) and
+          await check_user_exists(update.message.from_user.username)):
         trading_pair = update.message.text.strip().upper()
         context.user_data['trading_pair'] = trading_pair
 
